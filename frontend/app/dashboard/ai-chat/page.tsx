@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
-import { ArrowLeft, Send, Bot, User, Sparkles, Clock, Lock } from "lucide-react"
+import { Send, Bot, User, Sparkles, Clock, Lock } from "lucide-react"
 import Link from "next/link"
 
 type Message = {
@@ -114,13 +114,6 @@ export default function AIChatPage() {
 
     return (
         <div className="container mx-auto px-4 py-8 h-screen flex flex-col">
-            <div className="mb-6">
-                <Link href="/" className="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Home
-                </Link>
-            </div>
-
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { ArrowLeft, Upload, FileText, Check, AlertCircle, MessageSquare, FileUp } from "lucide-react"
+import { Upload, FileText, Check, AlertCircle, MessageSquare, FileUp } from "lucide-react"
 import { parseMpesaSms, MpesaTransaction } from "@/lib/mpesa-parser"
 
 export default function UploadPage() {
@@ -122,13 +122,6 @@ export default function UploadPage() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            <div className="mb-8">
-                <Link href="/dashboard" className="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Dashboard
-                </Link>
-            </div>
-
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import DashboardLayoutClient from "@/components/DashboardLayoutClient"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -15,7 +16,9 @@ export default function DashboardLayout({
 }>) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-950">
-            {children}
+            <DashboardLayoutClient>
+                {children}
+            </DashboardLayoutClient>
         </div>
     )
 }
