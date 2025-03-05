@@ -1,143 +1,237 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { Upload, MessageSquare, PieChart, LogOut, Menu, X } from "lucide-react"
+import { Home, FileUp, MessageSquare, Menu, X, ArrowUp, ArrowDown } from "lucide-react"
+import { MpesaTransaction, formatCurrency, formatDate } from "@/lib/mpesa-parser"
 
-export default function DashboardPage() {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+export default function Dashboard() {
+    const [sidebarOpen, setSidebarOpen] = useState(true)
+    const [transactions, setTransactions] = useState<MpesaTransaction[]>([])
+    const [stats, setStats] = useState({
+        income: 0,
+        expenses: 0,
+        balance: 0,
+        count: 0
+    })
+
+    // Load transactions from localStorage on component mount
+    useEffect(() => {
+        try {
+            // Load transactions
+            const storedTransactions = localStorage.getItem('mpesaTransactions')
+            if (storedTransactions) {
+                const parsedTransactions = JSON.parse(storedTransactions)
+                // Sort transactions by date (newest first)
+                parsedTransactions.sort((a: MpesaTransaction, b: MpesaTransaction) =>
+                    new Date(b.date).getTime() - new Date(a.date).getTime()
+                )
+                setTransactions(parsedTransactions)
+            }
+
+            // Load stats
+            const storedStats = localStorage.getItem('mpesaStats')
+            if (storedStats) {
+                const parsedStats = JSON.parse(storedStats)
+                setStats({
+                    ...parsedStats,
+                    balance: parsedStats.income - parsedStats.expenses
+                })
+            }
+        } catch (error) {
+            console.error("Error loading transactions from localStorage:", error)
+        }
+    }, [])
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-dark-bg to-cyber-grid text-white">
-            {/* Mobile sidebar toggle */}
-            <div className="lg:hidden fixed top-4 left-4 z-50">
-                <button
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className="p-2 rounded-full bg-black/30 backdrop-blur-lg border border-neon-blue/20"
-                >
-                    {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
-            </div>
-
+        <div className="flex h-screen bg-gray-900 text-white">
             {/* Sidebar */}
-            <div
-                className={`fixed top-0 left-0 h-full w-64 bg-black/50 backdrop-blur-lg border-r border-neon-blue/20 transition-transform duration-300 z-40 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-                    }`}
+            <motion.div
+                className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 p-4 shadow-lg transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+                initial={{ x: -100, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ duration: 0.5 }}
             >
-                <div className="p-6">
-                    <h1 className="text-2xl font-bold mb-8 text-center">
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple">
-                            AI-Pesa
-                        </span>
-                    </h1>
-
-                    <nav className="space-y-1">
-                        <Link
-                            href="/dashboard"
-                            className="flex items-center space-x-3 p-3 rounded-lg bg-neon-blue/10 text-neon-blue"
-                        >
-                            <PieChart size={20} />
-                            <span>Dashboard</span>
-                        </Link>
-                        <Link
-                            href="/dashboard/upload"
-                            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
-                        >
-                            <Upload size={20} />
-                            <span>Upload Statements</span>
-                        </Link>
-                        <Link
-                            href="/dashboard/ai-chat"
-                            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
-                        >
-                            <MessageSquare size={20} />
-                            <span>AI Chat</span>
-                        </Link>
-                    </nav>
-                </div>
-
-                <div className="absolute bottom-0 left-0 w-full p-4 border-t border-neon-blue/20">
-                    <Link
-                        href="/"
-                        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-red-400"
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-xl font-bold text-blue-400">AI-Pesa</h1>
+                    <button
+                        onClick={() => setSidebarOpen(false)}
+                        className="p-1 rounded-md hover:bg-gray-700 lg:hidden"
                     >
-                        <LogOut size={20} />
-                        <span>Sign Out</span>
-                    </Link>
+                        <X className="h-6 w-6" />
+                    </button>
                 </div>
-            </div>
+
+                <nav className="space-y-2">
+                    <Link href="/dashboard" className="flex items-center px-4 py-3 text-white bg-blue-600 rounded-md">
+                        <Home className="h-5 w-5 mr-3" />
+                        Dashboard
+                    </Link>
+                    <Link href="/dashboard/upload" className="flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-md transition-colors">
+                        <FileUp className="h-5 w-5 mr-3" />
+                        Upload Statements
+                    </Link>
+                    <Link href="/dashboard/ai-chat" className="flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 rounded-md transition-colors">
+                        <MessageSquare className="h-5 w-5 mr-3" />
+                        AI Chat
+                    </Link>
+                </nav>
+            </motion.div>
 
             {/* Main content */}
-            <div className="lg:ml-64 p-6">
-                <div className="max-w-6xl mx-auto">
-                    <header className="mb-8">
-                        <h1 className="text-3xl font-bold">Dashboard</h1>
-                        <p className="text-text-secondary">Welcome to your AI-Pesa dashboard</p>
-                    </header>
+            <div className="flex-1 overflow-auto">
+                {/* Mobile header */}
+                <div className="lg:hidden bg-gray-800 p-4 flex items-center justify-between">
+                    <h1 className="text-xl font-bold text-blue-400">AI-Pesa</h1>
+                    <button
+                        onClick={() => setSidebarOpen(true)}
+                        className="p-1 rounded-md hover:bg-gray-700"
+                    >
+                        <Menu className="h-6 w-6" />
+                    </button>
+                </div>
 
-                    {/* Dashboard content */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {/* Summary card */}
+                <div className="p-6 max-w-7xl mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <h1 className="text-3xl font-bold mb-2">Welcome to AI-Pesa</h1>
+                        <p className="text-gray-400 mb-8">Your AI-powered financial assistant</p>
+                    </motion.div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <motion.div
+                            className="bg-gray-800 rounded-lg p-6 shadow-md"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="bg-black/30 backdrop-blur-lg rounded-xl p-6 border border-neon-blue/20"
+                            transition={{ duration: 0.5, delay: 0.1 }}
                         >
-                            <h2 className="text-xl font-semibold mb-4">Account Summary</h2>
-                            <div className="space-y-3">
-                                <div className="flex justify-between">
-                                    <span className="text-text-secondary">Total Income</span>
-                                    <span className="font-medium text-green-400">KSh 0.00</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-text-secondary">Total Expenses</span>
-                                    <span className="font-medium text-red-400">KSh 0.00</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-text-secondary">Balance</span>
-                                    <span className="font-medium">KSh 0.00</span>
-                                </div>
-                            </div>
+                            <h3 className="text-lg font-medium mb-2">Total Income</h3>
+                            <p className="text-3xl font-bold text-green-400">
+                                {formatCurrency(stats.income)}
+                            </p>
                         </motion.div>
-
-                        {/* Upload prompt card */}
                         <motion.div
+                            className="bg-gray-800 rounded-lg p-6 shadow-md"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: 0.1 }}
-                            className="bg-black/30 backdrop-blur-lg rounded-xl p-6 border border-neon-blue/20 md:col-span-2 lg:col-span-2"
+                            transition={{ duration: 0.5, delay: 0.2 }}
                         >
-                            <div className="flex flex-col items-center justify-center text-center h-full py-8">
-                                <Upload size={48} className="text-neon-blue mb-4" />
-                                <h2 className="text-xl font-semibold mb-2">Upload Your M-Pesa Statement</h2>
-                                <p className="text-text-secondary mb-6 max-w-md">
-                                    Upload your M-Pesa statement or paste your M-Pesa messages to get started with AI-powered financial analysis
-                                </p>
-                                <Link
-                                    href="/dashboard/upload"
-                                    className="py-2 px-4 bg-gradient-to-r from-neon-blue to-neon-purple rounded-lg font-medium hover:opacity-90 transition-opacity"
-                                >
-                                    Upload Statement
-                                </Link>
-                            </div>
+                            <h3 className="text-lg font-medium mb-2">Total Expenses</h3>
+                            <p className="text-3xl font-bold text-red-400">
+                                {formatCurrency(stats.expenses)}
+                            </p>
                         </motion.div>
-
-                        {/* Recent transactions placeholder */}
                         <motion.div
+                            className="bg-gray-800 rounded-lg p-6 shadow-md"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: 0.2 }}
-                            className="bg-black/30 backdrop-blur-lg rounded-xl p-6 border border-neon-blue/20 col-span-1 md:col-span-2 lg:col-span-3"
+                            transition={{ duration: 0.5, delay: 0.3 }}
                         >
-                            <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
-                            <div className="text-center py-12 text-text-secondary">
-                                <p>No transactions found</p>
-                                <p className="text-sm mt-2">Upload your M-Pesa statement to see your transactions here</p>
-                            </div>
+                            <h3 className="text-lg font-medium mb-2">Balance</h3>
+                            <p className="text-3xl font-bold text-blue-400">
+                                {formatCurrency(stats.balance)}
+                            </p>
                         </motion.div>
                     </div>
+
+                    {transactions.length === 0 ? (
+                        <motion.div
+                            className="bg-gray-800 rounded-lg p-6 shadow-md mb-8"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.4 }}
+                        >
+                            <h2 className="text-xl font-semibold mb-4">Get Started</h2>
+                            <p className="text-gray-300 mb-4">
+                                Upload your M-Pesa statement or paste your M-Pesa SMS messages to get started with AI-powered financial analysis.
+                            </p>
+                            <Link href="/dashboard/upload" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors">
+                                Upload Now
+                            </Link>
+                        </motion.div>
+                    ) : null}
+
+                    <motion.div
+                        className="bg-gray-800 rounded-lg p-6 shadow-md"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.5 }}
+                    >
+                        <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
+
+                        {transactions.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400">
+                                <p>No transactions found</p>
+                                <p className="text-sm mt-2">Upload your M-Pesa statement or paste SMS messages to see your transactions</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="text-left text-gray-400 border-b border-gray-700">
+                                        <tr>
+                                            <th className="pb-3">Date</th>
+                                            <th className="pb-3">Type</th>
+                                            <th className="pb-3">Details</th>
+                                            <th className="pb-3 text-right">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-700">
+                                        {transactions.slice(0, 10).map((transaction, index) => (
+                                            <tr key={index} className="hover:bg-gray-700/30">
+                                                <td className="py-3 text-sm">
+                                                    {formatDate(new Date(transaction.date))}
+                                                </td>
+                                                <td className="py-3">
+                                                    {transaction.type === 'RECEIVED' ? (
+                                                        <span className="inline-flex items-center text-green-400">
+                                                            <ArrowDown className="h-4 w-4 mr-1" />
+                                                            Received
+                                                        </span>
+                                                    ) : transaction.type === 'SENT' ? (
+                                                        <span className="inline-flex items-center text-red-400">
+                                                            <ArrowUp className="h-4 w-4 mr-1" />
+                                                            Sent
+                                                        </span>
+                                                    ) : (
+                                                        <span>Unknown</span>
+                                                    )}
+                                                </td>
+                                                <td className="py-3">
+                                                    {transaction.type === 'RECEIVED' ? (
+                                                        <span>From: {transaction.sender || 'Unknown'}</span>
+                                                    ) : transaction.type === 'SENT' ? (
+                                                        <span>To: {transaction.recipient || 'Unknown'}</span>
+                                                    ) : (
+                                                        <span>{transaction.description || 'Transaction'}</span>
+                                                    )}
+                                                    <div className="text-xs text-gray-500">
+                                                        {transaction.phoneNumber ? `Phone: ${transaction.phoneNumber}` : ''}
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 text-right">
+                                                    <span className={transaction.type === 'RECEIVED' ? 'text-green-400' : 'text-red-400'}>
+                                                        {formatCurrency(transaction.amount)}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                {transactions.length > 10 && (
+                                    <div className="mt-4 text-center">
+                                        <Link href="/dashboard/transactions" className="text-blue-400 hover:text-blue-300">
+                                            View all {transactions.length} transactions
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </motion.div>
                 </div>
             </div>
         </div>
