@@ -1,0 +1,94 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+yarn.lock
+package-lock.json
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env*.local
+
+# Testing
+/coverage
+.nyc_output
+
+# Production Build
+/build
+/dist
+/.next/
+/out/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.pem
+.project
+.classpath
+.settings/
+
+# Vercel
+.vercel
+
+# Local SSL certificates
+*.key
+*.crt
+*.pem
+
+# Temporary files
+*.log
+*.tmp
+.temp/
+tmp/
+
+# Database files
+*.sqlite
+*.db
+
+# Cache directories
+.cache/
+.next/cache/
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Mpesa Statements and sensitive financial data
+*.pdf
+/statements/
+/uploads/
+/financial-data/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Local development specific files
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yml
+
+# Secrets and keys
+**/secrets/
+**/keys/
+*.key
+*.pem
+*.pub
+*.gpg
+*.asc
+*.p12
+*.pfx 

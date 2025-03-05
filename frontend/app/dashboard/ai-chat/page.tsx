@@ -3,14 +3,10 @@
 import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Send, Bot, User, Sparkles, Clock, Lock } from "lucide-react"
-import Link from "next/link"
-
-type Message = {
-    id: string
-    content: string
-    sender: "user" | "ai"
-    timestamp: Date
-}
+import { useRouter } from "next/navigation"
+import { useChat } from "@/lib/context/ChatContext"
+import { useAuth } from "@/lib/context/AuthContext"
+import { Button } from "@/components/ui/button"
 
 const SAMPLE_QUESTIONS = [
     "How much did I spend on food last month?",
@@ -21,17 +17,11 @@ const SAMPLE_QUESTIONS = [
 ]
 
 export default function AIChatPage() {
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: "welcome",
-            content: "Hello! I'm your AI-Pesa assistant. How can I help you with your finances today?",
-            sender: "ai",
-            timestamp: new Date(),
-        },
-    ])
+    const { messages, addMessage, remainingFreeMessages, isLoading } = useChat()
+    const { isAuthenticated } = useAuth()
     const [input, setInput] = useState("")
-    const [isTyping, setIsTyping] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
+    const router = useRouter()
 
     useEffect(() => {
         scrollToBottom()
@@ -41,34 +31,23 @@ export default function AIChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
 
-    const handleSendMessage = (e: React.FormEvent) => {
+    const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault()
 
         if (!input.trim()) return
 
-        // Add user message
-        const userMessage: Message = {
-            id: Date.now().toString(),
-            content: input,
-            sender: "user",
-            timestamp: new Date(),
+        if (!isAuthenticated && remainingFreeMessages <= 0) {
+            router.push("/auth/login")
+            return
         }
 
-        setMessages(prev => [...prev, userMessage])
+        // Add user message
+        await addMessage(input, "user")
         setInput("")
-        setIsTyping(true)
 
         // Simulate AI response
-        setTimeout(() => {
-            const aiMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                content: getAIResponse(input),
-                sender: "ai",
-                timestamp: new Date(),
-            }
-
-            setMessages(prev => [...prev, aiMessage])
-            setIsTyping(false)
+        setTimeout(async () => {
+            await addMessage(getAIResponse(input), "assistant")
         }, 1500)
     }
 
@@ -102,34 +81,54 @@ export default function AIChatPage() {
                 transition={{ duration: 0.5 }}
                 className="flex-1 flex flex-col max-w-4xl mx-auto w-full"
             >
-                <h1 className="text-3xl font-bold mb-2 text-white">AI Financial Assistant</h1>
-                <p className="text-gray-400 mb-6">
-                    Ask questions about your finances and get personalized insights
-                </p>
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 className="text-3xl font-bold mb-2 text-white">AI Financial Assistant</h1>
+                        <p className="text-gray-400">
+                            Ask questions about your finances and get personalized insights
+                        </p>
+                    </div>
+                    {!isAuthenticated && (
+                        <div className="text-right">
+                            <p className="text-sm text-gray-400 mb-2">
+                                {remainingFreeMessages} free messages remaining
+                            </p>
+                            <Button
+                                onClick={() => router.push("/auth/login")}
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-2"
+                            >
+                                <Lock className="w-4 h-4" />
+                                Login for unlimited access
+                            </Button>
+                        </div>
+                    )}
+                </div>
 
                 <div className="flex-1 bg-gray-800/50 rounded-lg p-4 mb-6 overflow-y-auto">
                     <div className="space-y-6">
                         {messages.map(message => (
                             <div
                                 key={message.id}
-                                className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
+                                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                             >
                                 <div
-                                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.sender === "user"
-                                        ? "bg-blue-600 text-white rounded-tr-none"
-                                        : "bg-gray-700 text-gray-100 rounded-tl-none"
+                                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.role === "user"
+                                            ? "bg-blue-600 text-white rounded-tr-none"
+                                            : "bg-gray-700 text-gray-100 rounded-tl-none"
                                         }`}
                                 >
                                     <div className="flex items-center mb-1">
                                         <div className="w-6 h-6 rounded-full flex items-center justify-center mr-2">
-                                            {message.sender === "user" ? (
+                                            {message.role === "user" ? (
                                                 <User className="h-4 w-4 text-white" />
                                             ) : (
                                                 <Bot className="h-4 w-4 text-blue-400" />
                                             )}
                                         </div>
                                         <span className="text-xs opacity-75">
-                                            {message.sender === "user" ? "You" : "AI-Pesa"}
+                                            {message.role === "user" ? "You" : "AI-Pesa"}
                                         </span>
                                         <span className="text-xs opacity-50 ml-auto flex items-center">
                                             <Clock className="h-3 w-3 mr-1" />
@@ -141,7 +140,7 @@ export default function AIChatPage() {
                             </div>
                         ))}
 
-                        {isTyping && (
+                        {isLoading && (
                             <div className="flex justify-start">
                                 <div className="bg-gray-700 text-white rounded-2xl rounded-tl-none px-4 py-3">
                                     <div className="flex items-center">
@@ -186,13 +185,22 @@ export default function AIChatPage() {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask about your finances..."
-                        className={`w-full bg-gray-800 text-white rounded-full pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                        placeholder={
+                            !isAuthenticated && remainingFreeMessages <= 0
+                                ? "Login to continue chatting..."
+                                : "Ask about your finances..."
+                        }
+                        className={`w-full bg-gray-800 text-white rounded-full pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!isAuthenticated && remainingFreeMessages <= 0 ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                        disabled={!isAuthenticated && remainingFreeMessages <= 0}
                     />
                     <button
                         type="submit"
-                        className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors ${!input.trim() ? "opacity-50 cursor-not-allowed" : ""}`}
-                        disabled={!input.trim()}
+                        className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors ${!input.trim() || (!isAuthenticated && remainingFreeMessages <= 0)
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }`}
+                        disabled={!input.trim() || (!isAuthenticated && remainingFreeMessages <= 0)}
                     >
                         <Send className="h-4 w-4 text-white" />
                     </button>

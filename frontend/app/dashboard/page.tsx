@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { ArrowUp, ArrowDown } from "lucide-react"
+import { ArrowUp, ArrowDown, User, LogOut } from "lucide-react"
 import { MpesaTransaction, formatCurrency, formatDate } from "@/lib/mpesa-parser"
+import { useAuth } from "@/lib/context/AuthContext"
 
 export default function Dashboard() {
     const [transactions, setTransactions] = useState<MpesaTransaction[]>([])
@@ -14,6 +15,7 @@ export default function Dashboard() {
         balance: 0,
         count: 0
     })
+    const { user, logout } = useAuth()
 
     // Load transactions from localStorage on component mount
     useEffect(() => {
@@ -50,9 +52,42 @@ export default function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <h1 className="text-3xl font-bold mb-2">Welcome to AI-Pesa</h1>
+                <h1 className="text-3xl font-bold mb-2">
+                    Welcome{user ? `, ${user.name}` : ' to AI-Pesa'}
+                </h1>
                 <p className="text-gray-400 mb-8">Your AI-powered financial assistant</p>
             </motion.div>
+
+            {/* User Profile Card */}
+            {user && (
+                <motion.div
+                    className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-md mb-8"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <div className="bg-blue-600 p-3 rounded-full mr-4">
+                                <User className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-semibold">{user.name}</h2>
+                                <p className="text-gray-400">{user.email}</p>
+                                {user.phoneNumber && (
+                                    <p className="text-gray-400">{user.phoneNumber}</p>
+                                )}
+                            </div>
+                        </div>
+                        <button
+                            onClick={logout}
+                            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors flex items-center"
+                        >
+                            <LogOut className="h-4 w-4 mr-2" /> Logout
+                        </button>
+                    </div>
+                </motion.div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
                 <motion.div
@@ -134,10 +169,10 @@ export default function Dashboard() {
                                         </td>
                                         <td className="px-4 py-3 text-xs sm:text-sm">
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${transaction.type === 'RECEIVED'
-                                                    ? 'bg-green-900/30 text-green-400'
-                                                    : transaction.type === 'SENT'
-                                                        ? 'bg-red-900/30 text-red-400'
-                                                        : 'bg-gray-700 text-gray-300'
+                                                ? 'bg-green-900/30 text-green-400'
+                                                : transaction.type === 'SENT'
+                                                    ? 'bg-red-900/30 text-red-400'
+                                                    : 'bg-gray-700 text-gray-300'
                                                 }`}>
                                                 {transaction.type}
                                             </span>

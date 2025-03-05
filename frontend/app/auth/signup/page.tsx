@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, ArrowRight, Check } from "lucide-react"
+import { useAuth } from "@/lib/context/AuthContext"
 
 export default function SignupPage() {
     const [name, setName] = useState("")
@@ -17,6 +18,7 @@ export default function SignupPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
     const router = useRouter()
+    const { signup } = useAuth()
 
     const passwordStrength = () => {
         if (!password) return 0
@@ -63,17 +65,11 @@ export default function SignupPage() {
         setError("")
 
         try {
-            // This is a placeholder for the actual registration logic
-            // In a real implementation, you would call your backend API
-            console.log("Signup attempt with:", { name, email, phoneNumber, password })
-
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000))
-
-            // For now, just redirect to a dashboard page
-            router.push("/dashboard")
-        } catch (err) {
-            setError("Failed to create account. Please try again.")
+            // Call the signup function from AuthContext with name, email, and password
+            await signup(name, email, password)
+            // No need to redirect here as the AuthContext will handle it
+        } catch (err: any) {
+            setError(err.message || "Failed to create account. Please try again.")
         } finally {
             setIsLoading(false)
         }

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --neon-blue: #00a8ff;
+  --neon-blue: #00f3ff;
   --neon-purple: #9d00ff;
   --neon-pink: #ff00f7;
   --dark-bg: #0a0a1e;
@@ -101,7 +101,8 @@ body {
 }
 
 .subtle-neon-text {
-  text-shadow: 0 0 5px rgba(0, 168, 255, 0.5);
+  text-shadow: 0 0 10px var(--neon-blue),
+    0 0 20px var(--neon-purple);
 }
 
 .neon-border {
@@ -141,6 +142,22 @@ body {
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-black text-white;
   }
+}
+
+@layer components {
+  .cyber-grid {
+    background-image: linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+}
+
+.neon-blue {
+  color: var(--neon-blue);
+}
+
+.neon-purple {
+  color: var(--neon-purple);
 }

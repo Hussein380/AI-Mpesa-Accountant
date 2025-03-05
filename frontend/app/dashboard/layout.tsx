@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import DashboardProtection from "./DashboardProtection"
 import DashboardLayoutClient from "@/components/DashboardLayoutClient"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -9,16 +10,19 @@ export const metadata: Metadata = {
     description: "Your AI-Powered M-Pesa Accountant Dashboard",
 }
 
+// Server component for metadata
 export default function DashboardLayout({
     children,
-}: Readonly<{
+}: {
     children: React.ReactNode
-}>) {
+}) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-950">
-            <DashboardLayoutClient>
-                {children}
-            </DashboardLayoutClient>
+        <div className="min-h-screen bg-black">
+            <DashboardProtection>
+                <DashboardLayoutClient>
+                    {children}
+                </DashboardLayoutClient>
+            </DashboardProtection>
         </div>
     )
 }

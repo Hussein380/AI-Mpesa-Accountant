@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, ArrowRight } from "lucide-react"
+import { useAuth } from "@/lib/context/AuthContext"
 
 export default function LoginPage() {
     const [email, setEmail] = useState("")
@@ -13,6 +14,7 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
     const router = useRouter()
+    const { login } = useAuth()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -20,17 +22,11 @@ export default function LoginPage() {
         setError("")
 
         try {
-            // This is a placeholder for the actual authentication logic
-            // In a real implementation, you would call your backend API
-            console.log("Login attempt with:", { email, password })
-
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000))
-
-            // For now, just redirect to a dashboard page
-            router.push("/dashboard")
-        } catch (err) {
-            setError("Invalid email or password. Please try again.")
+            // Call the login function from AuthContext
+            await login(email, password)
+            // No need to redirect here as the AuthContext will handle it
+        } catch (err: any) {
+            setError(err.message || "Invalid email or password. Please try again.")
         } finally {
             setIsLoading(false)
         }
