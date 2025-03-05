@@ -33,7 +33,7 @@ const features = [
 
 export default function Features() {
   return (
-    <section className="w-full py-20 bg-gray-900 relative overflow-hidden">
+    <section id="features" className="w-full py-20 bg-gray-900 relative overflow-hidden">
       <motion.div
         className="absolute inset-0"
         style={{

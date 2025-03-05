@@ -28,7 +28,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section className="w-full py-20 bg-gray-900 cyber-grid">
+    <section id="how-it-works" className="w-full py-20 bg-gray-950 relative overflow-hidden">
       <div className="container mx-auto px-4">
         <motion.h2
           className="text-4xl md:text-5xl font-bold mb-16 text-center subtle-neon-text"

@@ -4,7 +4,9 @@ import { motion } from "framer-motion"
 // Remove these imports as they're causing issues
 // import { Canvas } from "@react-three/fiber"
 // import { OrbitControls, Box } from "@react-three/drei"
-import WhatsAppButton from "./WhatsAppButton"
+import Link from "next/link"
+import TryAIButton from "./TryAIButton"
+import Navbar from "./Navbar"
 
 // Remove the 3D model function
 // function AIPesaModel() {
@@ -18,6 +20,7 @@ import WhatsAppButton from "./WhatsAppButton"
 export default function Hero() {
   return (
     <section className="w-full min-h-screen flex flex-col items-center justify-center text-center px-4 relative overflow-hidden cyber-grid">
+      <Navbar />
       <motion.div
         className="absolute inset-0 bg-gradient-to-br from-blue-900 to-purple-900 opacity-30"
         animate={{
@@ -64,7 +67,24 @@ export default function Hero() {
           >
             Your AI-Powered M-Pesa Accountant
           </motion.p>
-          <WhatsAppButton />
+          <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+            <TryAIButton />
+            <Link href="/auth/signup">
+              <motion.button
+                className="px-6 py-3 bg-black/30 backdrop-blur-sm border border-neon-blue/30 rounded-full text-white font-medium shadow-lg hover:bg-black/50 transition-all duration-300 flex items-center justify-center"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+              >
+                <span className="mr-2">Sign Up</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 00-1 1v5H4a1 1 0 100 2h5v5a1 1 0 102 0v-5h5a1 1 0 100-2h-5V4a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </motion.button>
+            </Link>
+          </div>
         </div>
         <div className="lg:w-1/2 h-[400px] relative">
           <motion.div
