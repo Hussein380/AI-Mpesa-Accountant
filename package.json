@@ -1,13 +1,9 @@
 {
   "name": "ai-pesa",
   "version": "1.0.0",
-  "description": "AI-Pesa project with frontend and backend",
+  "description": "AI-powered M-Pesa financial assistant",
   "scripts": {
-    "frontend:dev": "cd frontend && npm run dev",
-    "frontend:build": "cd frontend && npm run build",
-    "frontend:start": "cd frontend && npm run start",
-    "install:frontend": "cd frontend && npm install --legacy-peer-deps"
-  },
-  "author": "",
-  "license": "MIT"
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && npm run dev"
+  }
 }

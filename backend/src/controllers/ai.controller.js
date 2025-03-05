@@ -1,4 +1,5 @@
-const ollama = require('ollama');
+// We'll use dynamic import for Ollama later
+// const ollama = require('ollama');
 const User = require('../models/user.model');
 const ChatSession = require('../models/chat.model');
 
