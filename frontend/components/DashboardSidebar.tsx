@@ -55,7 +55,7 @@ export default function DashboardSidebar({ sidebarOpen, setSidebarOpen }: Dashbo
             {/* Sidebar */}
             <motion.div
                 data-sidebar
-                className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 p-4 shadow-lg transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                className={`fixed inset-y-0 left-0 z-50 w-56 sm:w-60 md:w-64 bg-gray-800 p-4 shadow-lg transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
                 initial={false}
                 animate={{ x: sidebarOpen ? 0 : -256 }}
@@ -76,8 +76,8 @@ export default function DashboardSidebar({ sidebarOpen, setSidebarOpen }: Dashbo
                     <Link
                         href="/dashboard"
                         className={`flex items-center px-4 py-3 rounded-md transition-colors ${pathname === "/dashboard"
-                                ? "text-white bg-blue-600"
-                                : "text-gray-300 hover:bg-gray-700"
+                            ? "text-white bg-blue-600"
+                            : "text-gray-300 hover:bg-gray-700"
                             }`}
                         onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
                     >
@@ -87,8 +87,8 @@ export default function DashboardSidebar({ sidebarOpen, setSidebarOpen }: Dashbo
                     <Link
                         href="/dashboard/upload"
                         className={`flex items-center px-4 py-3 rounded-md transition-colors ${pathname === "/dashboard/upload"
-                                ? "text-white bg-blue-600"
-                                : "text-gray-300 hover:bg-gray-700"
+                            ? "text-white bg-blue-600"
+                            : "text-gray-300 hover:bg-gray-700"
                             }`}
                         onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
                     >
@@ -98,8 +98,8 @@ export default function DashboardSidebar({ sidebarOpen, setSidebarOpen }: Dashbo
                     <Link
                         href="/dashboard/ai-chat"
                         className={`flex items-center px-4 py-3 rounded-md transition-colors ${pathname === "/dashboard/ai-chat"
-                                ? "text-white bg-blue-600"
-                                : "text-gray-300 hover:bg-gray-700"
+                            ? "text-white bg-blue-600"
+                            : "text-gray-300 hover:bg-gray-700"
                             }`}
                         onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
                     >

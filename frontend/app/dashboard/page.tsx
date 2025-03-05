@@ -54,37 +54,37 @@ export default function Dashboard() {
                 <p className="text-gray-400 mb-8">Your AI-powered financial assistant</p>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
                 <motion.div
-                    className="bg-gray-800 rounded-lg p-6 shadow-md"
+                    className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-md"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                 >
                     <h3 className="text-lg font-medium mb-2">Total Income</h3>
-                    <p className="text-3xl font-bold text-green-400">
+                    <p className="text-3xl md:text-3xl sm:text-2xl xs:text-xl font-bold text-green-400 break-words">
                         {formatCurrency(stats.income)}
                     </p>
                 </motion.div>
                 <motion.div
-                    className="bg-gray-800 rounded-lg p-6 shadow-md"
+                    className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-md"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                 >
                     <h3 className="text-lg font-medium mb-2">Total Expenses</h3>
-                    <p className="text-3xl font-bold text-red-400">
+                    <p className="text-3xl md:text-3xl sm:text-2xl xs:text-xl font-bold text-red-400 break-words">
                         {formatCurrency(stats.expenses)}
                     </p>
                 </motion.div>
                 <motion.div
-                    className="bg-gray-800 rounded-lg p-6 shadow-md"
+                    className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-md"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                 >
                     <h3 className="text-lg font-medium mb-2">Balance</h3>
-                    <p className="text-3xl font-bold text-blue-400">
+                    <p className="text-3xl md:text-3xl sm:text-2xl xs:text-xl font-bold text-blue-400 break-words">
                         {formatCurrency(stats.balance)}
                     </p>
                 </motion.div>
@@ -108,64 +108,45 @@ export default function Dashboard() {
             ) : null}
 
             <motion.div
-                className="bg-gray-800 rounded-lg p-6 shadow-md"
+                className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-md mb-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
             >
                 <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
 
-                {transactions.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                        <p>No transactions found</p>
-                        <p className="text-sm mt-2">Upload your M-Pesa statement or paste SMS messages to see your transactions</p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="text-left text-gray-400 border-b border-gray-700">
+                {transactions.length > 0 ? (
+                    <div className="overflow-x-auto -mx-4 sm:mx-0">
+                        <table className="min-w-full divide-y divide-gray-700">
+                            <thead>
                                 <tr>
-                                    <th className="pb-3">Date</th>
-                                    <th className="pb-3">Type</th>
-                                    <th className="pb-3">Details</th>
-                                    <th className="pb-3 text-right">Amount</th>
+                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Details</th>
+                                    <th className="px-4 py-3 text-right text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Amount</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-700">
-                                {transactions.slice(0, 10).map((transaction, index) => (
-                                    <tr key={index} className="hover:bg-gray-700/30">
-                                        <td className="py-3 text-sm">
+                                {transactions.slice(0, 5).map((transaction) => (
+                                    <tr key={transaction.transactionId} className="hover:bg-gray-700/50">
+                                        <td className="px-4 py-3 text-xs sm:text-sm whitespace-nowrap">
                                             {formatDate(new Date(transaction.date))}
                                         </td>
-                                        <td className="py-3">
-                                            {transaction.type === 'RECEIVED' ? (
-                                                <span className="inline-flex items-center text-green-400">
-                                                    <ArrowDown className="h-4 w-4 mr-1" />
-                                                    Received
-                                                </span>
-                                            ) : transaction.type === 'SENT' ? (
-                                                <span className="inline-flex items-center text-red-400">
-                                                    <ArrowUp className="h-4 w-4 mr-1" />
-                                                    Sent
-                                                </span>
-                                            ) : (
-                                                <span>Unknown</span>
-                                            )}
+                                        <td className="px-4 py-3 text-xs sm:text-sm">
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${transaction.type === 'RECEIVED'
+                                                    ? 'bg-green-900/30 text-green-400'
+                                                    : transaction.type === 'SENT'
+                                                        ? 'bg-red-900/30 text-red-400'
+                                                        : 'bg-gray-700 text-gray-300'
+                                                }`}>
+                                                {transaction.type}
+                                            </span>
                                         </td>
-                                        <td className="py-3">
-                                            {transaction.type === 'RECEIVED' ? (
-                                                <span>From: {transaction.sender || 'Unknown'}</span>
-                                            ) : transaction.type === 'SENT' ? (
-                                                <span>To: {transaction.recipient || 'Unknown'}</span>
-                                            ) : (
-                                                <span>{transaction.description || 'Transaction'}</span>
-                                            )}
-                                            <div className="text-xs text-gray-500">
-                                                {transaction.phoneNumber ? `Phone: ${transaction.phoneNumber}` : ''}
-                                            </div>
+                                        <td className="px-4 py-3 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-[200px]">
+                                            {transaction.recipient || transaction.sender || transaction.description || 'Unknown'}
                                         </td>
-                                        <td className="py-3 text-right">
-                                            <span className={transaction.type === 'RECEIVED' ? 'text-green-400' : 'text-red-400'}>
+                                        <td className="px-4 py-3 text-xs sm:text-sm text-right whitespace-nowrap font-medium">
+                                            <span className={transaction.type === 'RECEIVED' ? 'text-green-400' : transaction.type === 'SENT' ? 'text-red-400' : ''}>
                                                 {formatCurrency(transaction.amount)}
                                             </span>
                                         </td>
@@ -181,6 +162,11 @@ export default function Dashboard() {
                                 </Link>
                             </div>
                         )}
+                    </div>
+                ) : (
+                    <div className="text-center py-8 text-gray-400">
+                        <p>No transactions found</p>
+                        <p className="text-sm mt-2">Upload your M-Pesa statement or paste SMS messages to see your transactions</p>
                     </div>
                 )}
             </motion.div>

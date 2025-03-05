@@ -20,8 +20,6 @@ const SAMPLE_QUESTIONS = [
     "What are my top spending categories?",
 ]
 
-const FREE_MESSAGE_LIMIT = 3
-
 export default function AIChatPage() {
     const [messages, setMessages] = useState<Message[]>([
         {
@@ -33,8 +31,6 @@ export default function AIChatPage() {
     ])
     const [input, setInput] = useState("")
     const [isTyping, setIsTyping] = useState(false)
-    const [messageCount, setMessageCount] = useState(0)
-    const [showSignupPrompt, setShowSignupPrompt] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -50,12 +46,6 @@ export default function AIChatPage() {
 
         if (!input.trim()) return
 
-        // Check if user has reached the free message limit
-        if (messageCount >= FREE_MESSAGE_LIMIT) {
-            setShowSignupPrompt(true)
-            return
-        }
-
         // Add user message
         const userMessage: Message = {
             id: Date.now().toString(),
@@ -67,7 +57,6 @@ export default function AIChatPage() {
         setMessages(prev => [...prev, userMessage])
         setInput("")
         setIsTyping(true)
-        setMessageCount(prev => prev + 1)
 
         // Simulate AI response
         setTimeout(() => {
@@ -80,13 +69,6 @@ export default function AIChatPage() {
 
             setMessages(prev => [...prev, aiMessage])
             setIsTyping(false)
-
-            // Show signup prompt if this was the last free message
-            if (messageCount + 1 >= FREE_MESSAGE_LIMIT) {
-                setTimeout(() => {
-                    setShowSignupPrompt(true)
-                }, 1000)
-            }
         }, 1500)
     }
 
@@ -121,20 +103,9 @@ export default function AIChatPage() {
                 className="flex-1 flex flex-col max-w-4xl mx-auto w-full"
             >
                 <h1 className="text-3xl font-bold mb-2 text-white">AI Financial Assistant</h1>
-                <p className="text-gray-400 mb-2">
+                <p className="text-gray-400 mb-6">
                     Ask questions about your finances and get personalized insights
                 </p>
-                <div className="flex items-center mb-6">
-                    <div className="h-1 flex-1 bg-gray-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                            style={{ width: `${(messageCount / FREE_MESSAGE_LIMIT) * 100}%` }}
-                        ></div>
-                    </div>
-                    <span className="ml-3 text-sm text-gray-400">
-                        {messageCount}/{FREE_MESSAGE_LIMIT} free messages
-                    </span>
-                </div>
 
                 <div className="flex-1 bg-gray-800/50 rounded-lg p-4 mb-6 overflow-y-auto">
                     <div className="space-y-6">
@@ -188,44 +159,6 @@ export default function AIChatPage() {
                             </div>
                         )}
 
-                        {showSignupPrompt && (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-blue-500/30 rounded-lg p-6 text-center"
-                            >
-                                <div className="flex justify-center mb-4">
-                                    <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center">
-                                        <Lock className="h-8 w-8 text-blue-400" />
-                                    </div>
-                                </div>
-                                <h3 className="text-xl font-bold text-white mb-2">You've reached the free message limit</h3>
-                                <p className="text-gray-300 mb-6">
-                                    Sign up for AI-Pesa to continue chatting with your AI financial assistant and unlock all features.
-                                </p>
-                                <div className="flex flex-wrap gap-4 justify-center">
-                                    <Link href="/auth/signup">
-                                        <motion.button
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg text-white font-medium"
-                                        >
-                                            Sign Up Now
-                                        </motion.button>
-                                    </Link>
-                                    <Link href="/auth/login">
-                                        <motion.button
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            className="px-6 py-3 bg-gray-800 rounded-lg text-white font-medium"
-                                        >
-                                            Login
-                                        </motion.button>
-                                    </Link>
-                                </div>
-                            </motion.div>
-                        )}
-
                         <div ref={messagesEndRef} />
                     </div>
                 </div>
@@ -240,9 +173,7 @@ export default function AIChatPage() {
                             <button
                                 key={index}
                                 onClick={() => handleQuickQuestion(question)}
-                                disabled={showSignupPrompt}
-                                className={`px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 rounded-full transition-colors ${showSignupPrompt ? "opacity-50 cursor-not-allowed" : ""
-                                    }`}
+                                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 rounded-full transition-colors"
                             >
                                 {question}
                             </button>
@@ -255,16 +186,13 @@ export default function AIChatPage() {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={showSignupPrompt ? "Sign up to continue chatting..." : "Ask about your finances..."}
-                        disabled={showSignupPrompt}
-                        className={`w-full bg-gray-800 text-white rounded-full pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${showSignupPrompt ? "opacity-50 cursor-not-allowed" : ""
-                            }`}
+                        placeholder="Ask about your finances..."
+                        className={`w-full bg-gray-800 text-white rounded-full pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     />
                     <button
                         type="submit"
-                        className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors ${showSignupPrompt || !input.trim() ? "opacity-50 cursor-not-allowed" : ""
-                            }`}
-                        disabled={showSignupPrompt || !input.trim()}
+                        className={`absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center transition-colors ${!input.trim() ? "opacity-50 cursor-not-allowed" : ""}`}
+                        disabled={!input.trim()}
                     >
                         <Send className="h-4 w-4 text-white" />
                     </button>

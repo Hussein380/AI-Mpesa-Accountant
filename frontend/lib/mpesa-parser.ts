@@ -106,11 +106,21 @@ export function parseMpesaSms(smsText: string): MpesaTransaction[] {
  * @returns Formatted amount string
  */
 export function formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-KE', {
+    // Check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined';
+
+    // Get the screen width if in browser
+    const screenWidth = isBrowser ? window.innerWidth : 1200;
+
+    // Use a more compact format on small screens
+    const options: Intl.NumberFormatOptions = {
         style: 'currency',
         currency: 'KES',
-        minimumFractionDigits: 2
-    }).format(amount);
+        minimumFractionDigits: screenWidth < 640 ? 0 : 2,
+        maximumFractionDigits: screenWidth < 640 ? 0 : 2
+    };
+
+    return new Intl.NumberFormat('en-KE', options).format(amount);
 }
 
 /**
