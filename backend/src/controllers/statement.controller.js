@@ -23,16 +23,22 @@ exports.uploadStatement = async (req, res) => {
       name,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      originalFile: req.file.path,
+      // Handle file path differently based on environment
+      originalFile: process.env.NODE_ENV === 'production' 
+        ? `memory-${Date.now()}-${req.file.originalname}` // Just a reference in production
+        : req.file.path, // Actual file path in development
       transactions: [] // Will be populated after processing
     });
 
     await statement.save();
 
     // In a real implementation, you would:
-    // 1. Process the file to extract transactions
+    // 1. Process the file to extract transactions (using req.file.buffer in production)
     // 2. Update the statement with the extracted data
     // 3. Calculate totals
+
+    // For production (Vercel), you would process the file directly from memory
+    // const fileBuffer = req.file.buffer; // Available in memory storage
 
     res.status(201).json({
       message: 'Statement uploaded successfully',
@@ -100,8 +106,10 @@ exports.deleteStatement = async (req, res) => {
       return res.status(404).json({ message: 'Statement not found' });
     }
 
-    // Delete the file if it exists
-    if (statement.originalFile && fs.existsSync(statement.originalFile)) {
+    // Delete the file if it exists and we're in development mode
+    if (process.env.NODE_ENV !== 'production' && 
+        statement.originalFile && 
+        fs.existsSync(statement.originalFile)) {
       fs.unlinkSync(statement.originalFile);
     }
 

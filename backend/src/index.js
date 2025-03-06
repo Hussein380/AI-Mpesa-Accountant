@@ -20,20 +20,32 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected successfully'))
   .catch(err => {
     console.error('MongoDB connection error:', err);
-    process.exit(1);
+    // Don't exit process in serverless environment
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
   });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['https://ai-mpesa-accountant.vercel.app', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use(express.json());
-app.use(morgan('dev'));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 app.use(express.urlencoded({ extended: true }));
 
 // Create uploads directory if it doesn't exist
-const fs = require('fs');
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Note: In Vercel, file uploads should be handled differently
+// This is kept for local development
+if (process.env.NODE_ENV !== 'production') {
+  const fs = require('fs');
+  const uploadDir = path.join(__dirname, '../uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
 }
 
 // Routes
@@ -47,7 +59,16 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
     message: 'AI-Pesa API is running',
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    message: 'Welcome to AI-Pesa API',
+    documentation: 'See API_REFERENCE.md for details'
   });
 });
 
@@ -60,7 +81,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-}); 
+// Start server in development, export app in production
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+// Export app for serverless deployment
+module.exports = app; 
