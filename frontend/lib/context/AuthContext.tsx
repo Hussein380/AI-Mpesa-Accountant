@@ -18,7 +18,7 @@ interface AuthContextType {
     loading: boolean;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         const payload = JSON.parse(atob(token.split('.')[1]));
                         if (payload && payload.id) {
                             // Fetch user data from backend
-                            const response = await fetch(`${API_URL}/api/users/me`, {
+                            const response = await fetch(`${API_URL}/users/me`, {
                                 headers: {
                                     'Authorization': `Bearer ${token}`
                                 }
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             setLoading(true);
 
-            const response = await fetch(`${API_URL}/api/auth/login`, {
+            const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -105,12 +105,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
             setLoading(true);
 
-            const response = await fetch(`${API_URL}/api/auth/register`, {
+            const response = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify({ name, email, password, phoneNumber })
             });
 
             if (!response.ok) {

@@ -53,8 +53,8 @@ mongoose.connect(process.env.MONGODB_URI)
 // Middleware
 app.use(cors({
   origin: [
-    'ttps://ai-mpesa-accountant-backend.vercel.app',
     'https://ai-mpesa-accountant-frontend.vercel.app',
+    'https://ai-mpesa-accountant-backend.vercel.app',
     'http://localhost:3000'
   ],
   credentials: true,
