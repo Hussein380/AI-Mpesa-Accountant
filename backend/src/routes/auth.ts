@@ -23,14 +23,25 @@ router.post('/signup', async (req, res) => {
             return res.status(400).json({ error: 'Email already in use' });
         }
 
-        // Create new user
-        const user = new User({
+        // Create user data object
+        const userData: any = {
             name,
             email,
-            password,
-            phoneNumber
-        });
+            password
+        };
 
+        // Only add phoneNumber if it's a non-empty string
+        if (phoneNumber && typeof phoneNumber === 'string' && phoneNumber.trim() !== '') {
+            // Check if phone number is already in use
+            const existingPhoneUser = await User.findOne({ phoneNumber: phoneNumber.trim() });
+            if (existingPhoneUser) {
+                return res.status(400).json({ error: 'Phone number already in use' });
+            }
+            userData.phoneNumber = phoneNumber.trim();
+        }
+
+        // Create new user
+        const user = new User(userData);
         await user.save();
 
         // Generate token

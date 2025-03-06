@@ -17,7 +17,31 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB connected successfully'))
+  .then(async () => {
+    console.log('MongoDB connected successfully');
+    
+    // Drop the problematic phoneNumber index if it exists
+    try {
+      // Get the User model collection
+      const User = mongoose.connection.collection('users');
+      
+      // Get all indexes
+      const indexes = await User.indexes();
+      
+      // Check if phoneNumber index exists
+      const phoneNumberIndex = indexes.find(index => 
+        index.key && index.key.phoneNumber !== undefined
+      );
+      
+      // If the index exists, drop it
+      if (phoneNumberIndex) {
+        await User.dropIndex('phoneNumber_1');
+        console.log('Dropped phoneNumber index successfully');
+      }
+    } catch (error) {
+      console.error('Error handling phoneNumber index:', error);
+    }
+  })
   .catch(err => {
     console.error('MongoDB connection error:', err);
     // Don't exit process in serverless environment
@@ -28,8 +52,14 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Middleware
 app.use(cors({
-  origin: ['https://ai-mpesa-accountant.vercel.app', 'http://localhost:3000'],
-  credentials: true
+  origin: [
+    'https://ai-mpesa-accountant.vercel.app', 
+    'https://ai-mpesa-accountant-frontend.vercel.app',
+    'http://localhost:3000'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 if (process.env.NODE_ENV !== 'production') {
