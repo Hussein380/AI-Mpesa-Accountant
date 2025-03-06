@@ -1,12 +1,7 @@
 {
     "version": 2,
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/frontend/$1"
-        }
-    ],
-    "buildCommand": "npm run frontend:build",
-    "installCommand": "npm run install:frontend",
-    "outputDirectory": "frontend/.next"
+    "framework": "nextjs",
+    "buildCommand": "npm run build",
+    "installCommand": "npm install --legacy-peer-deps",
+    "outputDirectory": ".next"
 }
