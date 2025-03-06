@@ -61,17 +61,29 @@ router.post('/signup', async (req, res) => {
 // User login
 router.post('/login', async (req, res) => {
     try {
+        console.log('Login request received:', {
+            body: req.body,
+            headers: req.headers['content-type']
+        });
+
         const { email, password } = req.body;
+
+        if (!email || !password) {
+            console.log('Missing email or password');
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
 
         // Find user by email
         const user = await User.findOne({ email });
         if (!user) {
+            console.log('User not found:', email);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         // Check password
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
+            console.log('Password mismatch for user:', email);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
@@ -81,6 +93,8 @@ router.post('/login', async (req, res) => {
 
         // Generate token
         const token = generateToken(user._id.toString());
+
+        console.log('Login successful for user:', email);
 
         res.json({
             message: 'Login successful',

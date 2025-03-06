@@ -53,13 +53,13 @@ mongoose.connect(process.env.MONGODB_URI)
 // Middleware
 app.use(cors({
   origin: [
-    'https://ai-mpesa-accountant.vercel.app', 
+    'ttps://ai-mpesa-accountant-backend.vercel.app',
     'https://ai-mpesa-accountant-frontend.vercel.app',
     'http://localhost:3000'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 app.use(express.json());
 if (process.env.NODE_ENV !== 'production') {
@@ -83,6 +83,15 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/statements', statementRoutes);
+
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'API test successful',
+    timestamp: new Date().toISOString(),
+    headers: req.headers
+  });
+});
 
 // Health check route
 app.get('/api/health', (req, res) => {
