@@ -71,21 +71,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = async (email: string, password: string) => {
         try {
             setLoading(true);
+            console.log("Attempting login with API URL:", API_URL);
 
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({ email, password })
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Invalid email or password');
+            // Log response status for debugging
+            console.log("Login response status:", response.status);
+
+            // Get response text first
+            const responseText = await response.text();
+            console.log("Response text preview:", responseText.substring(0, 150));
+
+            // Try to parse as JSON
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error("Failed to parse response as JSON:", parseError);
+                throw new Error("Server returned an invalid response. Please try again later.");
             }
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Invalid email or password');
+            }
+
             localStorage.setItem('token', data.token);
             setUser({
                 id: data.user.id,
@@ -104,21 +120,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signup = async (name: string, email: string, password: string, phoneNumber?: string) => {
         try {
             setLoading(true);
+            console.log("Attempting signup with API URL:", API_URL);
 
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({ name, email, password, phoneNumber })
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Signup failed');
+            // Log response status for debugging
+            console.log("Signup response status:", response.status);
+
+            // Get response text first
+            const responseText = await response.text();
+            console.log("Response text preview:", responseText.substring(0, 150));
+
+            // Try to parse as JSON
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error("Failed to parse response as JSON:", parseError);
+                throw new Error("Server returned an invalid response. Please try again later.");
             }
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Failed to create account');
+            }
+
             localStorage.setItem('token', data.token);
             setUser({
                 id: data.user.id,

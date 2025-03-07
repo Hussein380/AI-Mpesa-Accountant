@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -31,12 +30,14 @@ export default function DashboardLayoutClient({
     }, []);
 
     return (
-        <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
+        <div className="flex flex-col lg:flex-row h-screen bg-gray-900 text-white overflow-hidden">
             <DashboardSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
             {/* Main content */}
-            <div className="flex-1 overflow-auto pt-0 lg:pt-0">
-                {children}
+            <div className="flex-1 overflow-auto w-full max-w-full">
+                <div className="min-h-screen w-full max-w-full">
+                    {children}
+                </div>
             </div>
         </div>
     )

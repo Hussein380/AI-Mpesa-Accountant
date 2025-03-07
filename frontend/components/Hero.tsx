@@ -49,10 +49,11 @@ export default function Hero() {
           repeatType: "reverse",
         }}
       />
-      <div className="container mx-auto flex flex-col lg:flex-row items-center justify-between">
-        <div className="lg:w-1/2 mb-10 lg:mb-0">
+      <div className="container mx-auto flex flex-col lg:flex-row items-center justify-between py-8 md:py-12">
+        {/* Left side - Text content */}
+        <div className="lg:w-1/2 mb-10 lg:mb-0 px-4">
           <motion.h1
-            className="text-5xl md:text-7xl font-bold mb-4 subtle-neon-text relative z-10"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 subtle-neon-text relative z-10 leading-tight"
             initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, type: "spring" }}
@@ -60,7 +61,7 @@ export default function Hero() {
             AI-Pesa: Future of Finance
           </motion.h1>
           <motion.p
-            className="text-xl md:text-2xl mb-8 text-blue-200 relative z-10"
+            className="text-lg sm:text-xl md:text-2xl mb-8 text-blue-200 relative z-10"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
@@ -86,7 +87,9 @@ export default function Hero() {
             </Link>
           </div>
         </div>
-        <div className="lg:w-1/2 h-[400px] relative">
+
+        {/* Right side - Visual element */}
+        <div className="lg:w-1/2 h-[250px] sm:h-[300px] md:h-[350px] lg:h-[400px] relative mt-8 lg:mt-0">
           <motion.div
             className="absolute inset-0 rounded-2xl overflow-hidden"
             initial={{ opacity: 0, scale: 0.8 }}
@@ -117,14 +120,14 @@ export default function Hero() {
           </motion.div>
 
           <motion.div
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-full px-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.8 }}
           >
             <div className="relative">
               <motion.div
-                className="w-64 h-64 rounded-full bg-blue-500 opacity-20 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                className="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-full bg-blue-500 opacity-20 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
                 animate={{
                   scale: [1, 1.2, 1],
                   opacity: [0.2, 0.3, 0.2]
@@ -136,7 +139,7 @@ export default function Hero() {
                 }}
               ></motion.div>
               <motion.div
-                className="text-5xl font-bold text-white"
+                className="text-3xl sm:text-4xl md:text-5xl font-bold text-white"
                 animate={{
                   textShadow: ['0 0 8px rgba(59, 130, 246, 0.8)', '0 0 16px rgba(147, 51, 234, 0.8)', '0 0 8px rgba(59, 130, 246, 0.8)']
                 }}
@@ -149,7 +152,7 @@ export default function Hero() {
                 AI-Pesa
               </motion.div>
               <motion.div
-                className="mt-4 text-blue-200 text-lg"
+                className="mt-2 md:mt-4 text-blue-200 text-sm sm:text-base md:text-lg"
                 animate={{ opacity: [0.7, 1, 0.7] }}
                 transition={{
                   duration: 3,

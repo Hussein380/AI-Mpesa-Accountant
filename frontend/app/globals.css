@@ -11,6 +11,17 @@
   --cyber-grid: #1a1b4e;
 }
 
+/* Add responsive font sizes */
+html {
+  font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
+
 .dark {
   --bg-primary: var(--dark-bg);
   --text-primary: #ffffff;

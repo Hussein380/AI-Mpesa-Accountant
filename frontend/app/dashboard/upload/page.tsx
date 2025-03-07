@@ -121,38 +121,38 @@ export default function UploadPage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
                 className="max-w-3xl mx-auto"
             >
-                <h1 className="text-3xl font-bold mb-2 text-white">Upload M-Pesa Statement</h1>
-                <p className="text-gray-400 mb-8">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2 text-white">Upload M-Pesa Statement</h1>
+                <p className="text-xs sm:text-sm text-gray-400 mb-4 sm:mb-8">
                     Upload your M-Pesa statement or paste M-Pesa SMS messages to analyze your transactions
                 </p>
 
                 {/* Tab navigation */}
-                <div className="flex mb-6 bg-gray-800/50 rounded-lg p-1">
+                <div className="flex mb-4 sm:mb-6 bg-gray-800/50 rounded-lg p-1">
                     <button
                         onClick={() => switchTab("file")}
-                        className={`flex-1 py-3 px-4 rounded-md flex items-center justify-center transition-colors ${activeTab === "file"
+                        className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-md flex items-center justify-center transition-colors text-xs sm:text-sm ${activeTab === "file"
                             ? "bg-blue-600 text-white"
                             : "text-gray-400 hover:text-white hover:bg-gray-700/50"
                             }`}
                     >
-                        <FileUp className="h-5 w-5 mr-2" />
+                        <FileUp className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                         Upload File
                     </button>
                     <button
                         onClick={() => switchTab("sms")}
-                        className={`flex-1 py-3 px-4 rounded-md flex items-center justify-center transition-colors ${activeTab === "sms"
+                        className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-md flex items-center justify-center transition-colors text-xs sm:text-sm ${activeTab === "sms"
                             ? "bg-blue-600 text-white"
                             : "text-gray-400 hover:text-white hover:bg-gray-700/50"
                             }`}
                     >
-                        <MessageSquare className="h-5 w-5 mr-2" />
+                        <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
                         Paste SMS
                     </button>
                 </div>
@@ -160,7 +160,7 @@ export default function UploadPage() {
                 {/* File upload section */}
                 {activeTab === "file" && (
                     <div
-                        className={`border-2 border-dashed rounded-lg p-12 text-center mb-8 transition-colors ${isDragging
+                        className={`border-2 border-dashed rounded-lg p-4 sm:p-8 md:p-12 text-center mb-4 sm:mb-8 transition-colors ${isDragging
                             ? "border-blue-500 bg-blue-500/10"
                             : "border-gray-600 hover:border-blue-400 hover:bg-blue-400/5"
                             }`}
@@ -168,13 +168,13 @@ export default function UploadPage() {
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
                     >
-                        <div className="mb-4">
-                            <Upload className="h-12 w-12 mx-auto text-blue-400" />
+                        <div className="mb-3 sm:mb-4">
+                            <Upload className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 mx-auto text-blue-400" />
                         </div>
-                        <p className="text-lg mb-2 text-white">
+                        <p className="text-base sm:text-lg mb-1 sm:mb-2 text-white">
                             Drag and drop your M-Pesa statement here
                         </p>
-                        <p className="text-sm text-gray-400 mb-6">
+                        <p className="text-xs sm:text-sm text-gray-400 mb-4 sm:mb-6">
                             Supports PDF and CSV formats
                         </p>
                         <label className="inline-block">
@@ -184,7 +184,7 @@ export default function UploadPage() {
                                 accept=".pdf,.csv"
                                 onChange={handleFileInput}
                             />
-                            <span className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md cursor-pointer transition-colors">
+                            <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md cursor-pointer transition-colors text-xs sm:text-sm">
                                 Browse Files
                             </span>
                         </label>
@@ -193,14 +193,14 @@ export default function UploadPage() {
 
                 {/* SMS paste section */}
                 {activeTab === "sms" && (
-                    <div className="bg-gray-800/50 rounded-lg p-6 mb-8">
-                        <div className="mb-4">
-                            <h3 className="text-lg font-medium text-white mb-2">Paste M-Pesa SMS Messages</h3>
-                            <p className="text-sm text-gray-400 mb-4">
+                    <div className="bg-gray-800/50 rounded-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-8">
+                        <div className="mb-3 sm:mb-4">
+                            <h3 className="text-base sm:text-lg font-medium text-white mb-1 sm:mb-2">Paste M-Pesa SMS Messages</h3>
+                            <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
                                 Copy and paste your M-Pesa SMS messages below. Include as many transactions as possible for better analysis.
                             </p>
                             <textarea
-                                className="w-full h-64 bg-gray-900 text-white border border-gray-700 rounded-md p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full h-48 sm:h-64 bg-gray-900 text-white border border-gray-700 rounded-md p-3 sm:p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                 placeholder="Example: 
 FGH32YUIDK Confirmed. Ksh1,000 sent to JOHN DOE 254712345678 on 3/3/24 at 2:15 PM. New M-PESA balance is Ksh5,200. Transaction cost, Ksh12."
                                 value={smsText}
@@ -219,13 +219,13 @@ FGH32YUIDK Confirmed. Ksh1,000 sent to JOHN DOE 254712345678 on 3/3/24 at 2:15 P
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
-                        className="bg-gray-800 rounded-lg p-6 mb-8"
+                        className="bg-gray-800 rounded-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-8"
                     >
-                        <div className="flex items-center mb-4">
-                            <FileText className="h-8 w-8 text-blue-400 mr-3" />
+                        <div className="flex items-center mb-3 sm:mb-4">
+                            <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400 mr-2 sm:mr-3" />
                             <div>
-                                <h3 className="text-lg font-medium text-white">{file.name}</h3>
-                                <p className="text-sm text-gray-400">
+                                <h3 className="text-base sm:text-lg font-medium text-white">{file.name}</h3>
+                                <p className="text-xs sm:text-sm text-gray-400">
                                     {(file.size / 1024).toFixed(2)} KB
                                 </p>
                             </div>
@@ -234,7 +234,7 @@ FGH32YUIDK Confirmed. Ksh1,000 sent to JOHN DOE 254712345678 on 3/3/24 at 2:15 P
                         <button
                             onClick={handleUpload}
                             disabled={uploadStatus === "uploading" || uploadStatus === "success"}
-                            className={`w-full py-3 rounded-md font-medium transition-colors ${uploadStatus === "uploading"
+                            className={`w-full py-2 sm:py-3 rounded-md font-medium transition-colors text-sm sm:text-base ${uploadStatus === "uploading"
                                 ? "bg-blue-700 text-blue-200 cursor-not-allowed"
                                 : uploadStatus === "success"
                                     ? "bg-green-600 text-white cursor-not-allowed"
@@ -245,14 +245,8 @@ FGH32YUIDK Confirmed. Ksh1,000 sent to JOHN DOE 254712345678 on 3/3/24 at 2:15 P
                             {uploadStatus === "uploading" && "Uploading..."}
                             {uploadStatus === "success" && (
                                 <span className="flex items-center justify-center">
-                                    <Check className="h-5 w-5 mr-2" />
+                                    <Check className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
                                     Upload Complete
-                                </span>
-                            )}
-                            {uploadStatus === "error" && (
-                                <span className="flex items-center justify-center">
-                                    <AlertCircle className="h-5 w-5 mr-2" />
-                                    Upload Failed - Try Again
                                 </span>
                             )}
                         </button>
@@ -260,84 +254,111 @@ FGH32YUIDK Confirmed. Ksh1,000 sent to JOHN DOE 254712345678 on 3/3/24 at 2:15 P
                 )}
 
                 {/* SMS submit button */}
-                {activeTab === "sms" && smsText.trim() && !smsSubmitted && (
+                {activeTab === "sms" && !smsSubmitted && (
                     <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="mb-8"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mb-4 sm:mb-8"
                     >
                         <button
                             onClick={handleUpload}
-                            disabled={uploadStatus === "uploading" || uploadStatus === "success"}
-                            className={`w-full py-3 rounded-md font-medium transition-colors ${uploadStatus === "uploading"
-                                ? "bg-blue-700 text-blue-200 cursor-not-allowed"
-                                : uploadStatus === "success"
-                                    ? "bg-green-600 text-white cursor-not-allowed"
+                            disabled={!smsText.trim() || uploadStatus === "uploading"}
+                            className={`w-full py-2 sm:py-3 rounded-md font-medium transition-colors text-sm sm:text-base ${!smsText.trim()
+                                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                                : uploadStatus === "uploading"
+                                    ? "bg-blue-700 text-blue-200 cursor-not-allowed"
                                     : "bg-blue-600 hover:bg-blue-700 text-white"
                                 }`}
                         >
-                            {uploadStatus === "idle" && "Process SMS Messages"}
-                            {uploadStatus === "uploading" && "Processing..."}
-                            {uploadStatus === "success" && (
-                                <span className="flex items-center justify-center">
-                                    <Check className="h-5 w-5 mr-2" />
-                                    Processing Complete
-                                </span>
-                            )}
-                            {uploadStatus === "error" && (
-                                <span className="flex items-center justify-center">
-                                    <AlertCircle className="h-5 w-5 mr-2" />
-                                    Processing Failed - Try Again
-                                </span>
-                            )}
+                            {uploadStatus === "uploading" ? "Processing..." : "Process SMS Messages"}
                         </button>
                     </motion.div>
                 )}
 
-                {/* Success message for SMS */}
+                {/* Results section for SMS */}
                 {activeTab === "sms" && smsSubmitted && (
                     <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="bg-green-600/20 border border-green-500 rounded-lg p-6 mb-8"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gray-800 rounded-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-8"
                     >
-                        <div className="flex items-center mb-2">
-                            <Check className="h-6 w-6 text-green-500 mr-2" />
-                            <h3 className="text-lg font-medium text-white">SMS Messages Processed Successfully</h3>
-                        </div>
-                        <p className="text-gray-300 mb-4">
-                            Your M-Pesa SMS messages have been processed. We found:
-                        </p>
-                        <div className="grid grid-cols-3 gap-4 mb-4 bg-gray-800/50 p-4 rounded-lg">
-                            <div>
-                                <p className="text-sm text-gray-400">Transactions</p>
-                                <p className="text-xl font-bold text-white">{transactionStats.count}</p>
+                        <div className="flex items-center mb-3 sm:mb-4">
+                            <div className="bg-green-600/20 p-2 rounded-full mr-3">
+                                <Check className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
                             </div>
                             <div>
-                                <p className="text-sm text-gray-400">Income</p>
-                                <p className="text-xl font-bold text-green-400">KSh {transactionStats.income.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-400">Expenses</p>
-                                <p className="text-xl font-bold text-red-400">KSh {transactionStats.expenses.toLocaleString()}</p>
+                                <h3 className="text-base sm:text-lg font-medium text-white">SMS Processing Complete</h3>
+                                <p className="text-xs sm:text-sm text-gray-400">
+                                    {parsedTransactions.length} transactions extracted
+                                </p>
                             </div>
                         </div>
-                        <Link href="/dashboard" className="mt-2 inline-block px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors">
-                            View Dashboard
-                        </Link>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+                            <div className="bg-gray-700/50 rounded-lg p-3 sm:p-4">
+                                <p className="text-xs sm:text-sm text-gray-400 mb-1">Total Income</p>
+                                <p className="text-lg sm:text-xl font-bold text-green-400">
+                                    {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(transactionStats.income)}
+                                </p>
+                            </div>
+                            <div className="bg-gray-700/50 rounded-lg p-3 sm:p-4">
+                                <p className="text-xs sm:text-sm text-gray-400 mb-1">Total Expenses</p>
+                                <p className="text-lg sm:text-xl font-bold text-red-400">
+                                    {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(transactionStats.expenses)}
+                                </p>
+                            </div>
+                            <div className="bg-gray-700/50 rounded-lg p-3 sm:p-4">
+                                <p className="text-xs sm:text-sm text-gray-400 mb-1">Transactions</p>
+                                <p className="text-lg sm:text-xl font-bold text-blue-400">
+                                    {transactionStats.count}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                            <Link href="/dashboard" className="flex-1">
+                                <button className="w-full py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm sm:text-base">
+                                    View Dashboard
+                                </button>
+                            </Link>
+                            <button
+                                onClick={() => {
+                                    setSmsText("")
+                                    setSmsSubmitted(false)
+                                    setUploadStatus("idle")
+                                }}
+                                className="flex-1 py-2 sm:py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors text-sm sm:text-base"
+                            >
+                                Process More SMS
+                            </button>
+                        </div>
                     </motion.div>
                 )}
 
-                <div className="bg-gray-800/50 rounded-lg p-6">
-                    <h2 className="text-xl font-semibold mb-4 text-white">How it works</h2>
-                    <ol className="list-decimal list-inside space-y-3 text-gray-300">
-                        <li>Upload your M-Pesa statement or paste your M-Pesa SMS messages</li>
-                        <li>Our AI will analyze your transactions and categorize them</li>
-                        <li>View insights about your spending habits and financial patterns</li>
-                        <li>Get personalized recommendations to improve your financial health</li>
-                        <li>Chat with our AI assistant to ask questions about your finances</li>
-                    </ol>
-                </div>
+                {/* Error state */}
+                {uploadStatus === "error" && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-900/20 border border-red-500/50 rounded-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-8"
+                    >
+                        <div className="flex items-start">
+                            <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-red-400 mr-2 sm:mr-3 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="text-base sm:text-lg font-medium text-white mb-1 sm:mb-2">Processing Error</h3>
+                                <p className="text-xs sm:text-sm text-gray-300 mb-3 sm:mb-4">
+                                    There was an error processing your {activeTab === "file" ? "file" : "SMS messages"}. Please try again or use a different {activeTab === "file" ? "file" : "set of messages"}.
+                                </p>
+                                <button
+                                    onClick={() => setUploadStatus("idle")}
+                                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors text-xs sm:text-sm"
+                                >
+                                    Try Again
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
             </motion.div>
         </div>
     )
