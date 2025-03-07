@@ -119,15 +119,17 @@ export default function Hero() {
             ></motion.div>
           </motion.div>
 
-          <motion.div
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 w-full px-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-          >
-            <div className="relative">
+          {/* Content container with fixed dimensions */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <motion.div
+              className="relative w-[80%] max-w-[300px] aspect-square flex flex-col items-center justify-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.8 }}
+            >
+              {/* Background circle */}
               <motion.div
-                className="w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 rounded-full bg-blue-500 opacity-20 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                className="w-full h-full rounded-full bg-blue-500 opacity-20 absolute"
                 animate={{
                   scale: [1, 1.2, 1],
                   opacity: [0.2, 0.3, 0.2]
@@ -138,32 +140,36 @@ export default function Hero() {
                   repeatType: "reverse"
                 }}
               ></motion.div>
-              <motion.div
-                className="text-3xl sm:text-4xl md:text-5xl font-bold text-white"
-                animate={{
-                  textShadow: ['0 0 8px rgba(59, 130, 246, 0.8)', '0 0 16px rgba(147, 51, 234, 0.8)', '0 0 8px rgba(59, 130, 246, 0.8)']
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  repeatType: "reverse"
-                }}
-              >
-                AI-Pesa
-              </motion.div>
-              <motion.div
-                className="mt-2 md:mt-4 text-blue-200 text-sm sm:text-base md:text-lg"
-                animate={{ opacity: [0.7, 1, 0.7] }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  repeatType: "reverse"
-                }}
-              >
-                Intelligent Financial Assistant
-              </motion.div>
-            </div>
-          </motion.div>
+
+              {/* Text content */}
+              <div className="z-10 text-center px-4">
+                <motion.div
+                  className="text-3xl sm:text-4xl md:text-5xl font-bold text-white"
+                  animate={{
+                    textShadow: ['0 0 8px rgba(59, 130, 246, 0.8)', '0 0 16px rgba(147, 51, 234, 0.8)', '0 0 8px rgba(59, 130, 246, 0.8)']
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                >
+                  AI-Pesa
+                </motion.div>
+                <motion.div
+                  className="mt-2 md:mt-4 text-blue-200 text-sm sm:text-base md:text-lg"
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                >
+                  Intelligent Financial Assistant
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
       <motion.div
