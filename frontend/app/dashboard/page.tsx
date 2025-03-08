@@ -7,6 +7,7 @@ import { ArrowUp, ArrowDown, User, LogOut } from "lucide-react"
 import { MpesaTransaction, formatCurrency, formatDate } from "@/lib/mpesa-parser"
 import { useAuth } from "@/lib/context/AuthContext"
 import { useSearchParams } from "next/navigation"
+import { getToken } from '../../utils/auth'
 
 export default function Dashboard() {
     const [transactions, setTransactions] = useState<MpesaTransaction[]>([])
@@ -20,50 +21,43 @@ export default function Dashboard() {
     const { user, logout } = useAuth()
     const searchParams = useSearchParams()
     const refreshParam = searchParams.get('refresh')
+    const [error, setError] = useState<string | null>(null)
+    const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 0 })
 
     // Fetch transactions from the database
     useEffect(() => {
         const fetchTransactions = async () => {
-            try {
-                setLoading(true)
-                console.log('Dashboard: Starting to fetch transactions...')
+            console.log('Dashboard: Starting to fetch transactions...')
+            setLoading(true)
 
-                // Get the authentication token
-                const token = localStorage.getItem('token')
+            try {
+                // Get token from auth utility
+                const token = getToken()
                 if (!token) {
                     console.log('Dashboard: No token found, skipping fetch')
                     setLoading(false)
                     return
                 }
+
                 console.log('Dashboard: Token found, proceeding with fetch')
 
                 // Fetch transactions from the API
                 const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/transactions?limit=100`
                 console.log('Dashboard: Fetching from URL:', apiUrl)
 
-                let response;
-                try {
-                    response = await fetch(apiUrl, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        // Add cache: 'no-store' to prevent caching
-                        cache: 'no-store'
-                    });
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    cache: 'no-store' // Ensure we don't use cached data
+                })
 
-                    console.log('Dashboard: Response status:', response.status);
-                } catch (fetchError) {
-                    console.error('Dashboard: Fetch error:', fetchError);
-                    throw new Error(`Error connecting to API: ${fetchError.message}`);
-                }
+                console.log('Dashboard: Response status:', response.status)
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Dashboard: API error response:', errorText);
-                    throw new Error(`Error fetching transactions: ${response.statusText}`);
+                    throw new Error(`Error connecting to API: ${response.statusText}`)
                 }
 
                 // Get response text first for debugging
@@ -79,80 +73,44 @@ export default function Dashboard() {
                     throw new Error("Server returned an invalid response")
                 }
 
-                console.log('Dashboard: Fetched transactions count:', data.transactions?.length || 0)
-
-                if (!data.transactions || data.transactions.length === 0) {
-                    console.log('Dashboard: No transactions found in response')
+                // Check if transactions array exists
+                if (!data.transactions) {
+                    console.log('Dashboard: No transactions array in response')
+                    setTransactions([])
+                    setStats({ income: 0, expenses: 0 })
                     setLoading(false)
                     return
                 }
 
-                // Log the first transaction for debugging
-                console.log('Dashboard: First transaction:', JSON.stringify(data.transactions[0]))
+                console.log('Dashboard: Fetched transactions count:', data.transactions.length)
 
-                // Map API transactions to the format expected by the frontend
-                const mappedTransactions = data.transactions.map((t: any) => ({
-                    id: t.transactionId,
-                    date: new Date(t.date),
-                    type: t.type,
-                    amount: t.amount,
-                    balance: t.balance,
-                    recipient: t.recipient,
-                    sender: t.sender,
-                    description: t.description,
-                    category: t.category
-                }))
-
-                console.log('Dashboard: Mapped transactions count:', mappedTransactions.length)
-
-                // Use stats from API if available, otherwise calculate from transactions
-                let calculatedStats
-                if (data.stats) {
-                    console.log('Dashboard: Using stats from API:', JSON.stringify(data.stats))
-                    calculatedStats = {
-                        income: data.stats.income || 0,
-                        expenses: data.stats.expenses || 0,
-                        count: mappedTransactions.length
-                    }
+                if (data.transactions.length === 0) {
+                    console.log('Dashboard: No transactions found in response')
+                    setTransactions([])
+                    setStats({ income: 0, expenses: 0 })
                 } else {
-                    console.log('Dashboard: Calculating stats from transactions')
-                    // Calculate stats from the transactions
-                    calculatedStats = mappedTransactions.reduce((acc: any, transaction: MpesaTransaction) => {
-                        console.log(`Dashboard: Processing transaction: ${transaction.id}, type: ${transaction.type}, amount: ${transaction.amount}`)
-
-                        if (transaction.type === 'RECEIVED') {
-                            acc.income += transaction.amount
-                            console.log(`Dashboard: Added ${transaction.amount} to income, new total: ${acc.income}`)
-                        } else if (['SENT', 'PAYMENT', 'WITHDRAWAL'].includes(transaction.type)) {
-                            acc.expenses += transaction.amount
-                            console.log(`Dashboard: Added ${transaction.amount} to expenses, new total: ${acc.expenses}`)
-                        }
-                        return acc
-                    }, { income: 0, expenses: 0, count: mappedTransactions.length })
+                    console.log('Dashboard: Processing transactions from response')
+                    setTransactions(data.transactions)
+                    setStats(data.stats || { income: 0, expenses: 0 })
                 }
 
-                console.log('Dashboard: Final calculated stats:', JSON.stringify(calculatedStats))
+                // Update pagination
+                setPagination(data.pagination || { total: 0, page: 1, pages: 0 })
 
-                setTransactions(mappedTransactions)
-                setStats({
-                    ...calculatedStats,
-                    balance: calculatedStats.income - calculatedStats.expenses
-                })
-
-                console.log('Dashboard: State updated with transactions and stats')
             } catch (error) {
-                console.error("Dashboard: Error fetching transactions:", error)
+                console.error('Dashboard: Error fetching transactions:', error)
+                setError(`Error fetching transactions: ${error.message}`)
             } finally {
-                setLoading(false)
                 console.log('Dashboard: Fetch completed, loading set to false')
+                setLoading(false)
             }
         }
 
         console.log('Dashboard: useEffect triggered, calling fetchTransactions')
         fetchTransactions()
 
-        // Add a refresh interval to periodically fetch new transactions
-        const refreshInterval = setInterval(() => {
+        // Set up refresh interval
+        const interval = setInterval(() => {
             console.log('Dashboard: Refresh interval triggered')
             fetchTransactions()
         }, 30000) // Refresh every 30 seconds
@@ -160,7 +118,7 @@ export default function Dashboard() {
         // Clean up the interval on component unmount
         return () => {
             console.log('Dashboard: Cleaning up refresh interval')
-            clearInterval(refreshInterval)
+            clearInterval(interval)
         }
     }, [refreshParam])
 

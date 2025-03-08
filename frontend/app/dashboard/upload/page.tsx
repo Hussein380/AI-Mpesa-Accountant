@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Upload, FileText, Check, AlertCircle, MessageSquare, FileUp } from "lucide-react"
 import { parseMpesaSms, MpesaTransaction } from "@/lib/mpesa-parser"
 import { toast } from "@/components/ui/use-toast"
+import { getToken } from '../../../utils/auth'
 
 export default function UploadPage() {
     const [isDragging, setIsDragging] = useState(false)
@@ -87,7 +88,7 @@ export default function UploadPage() {
 
                 // Calculate stats
                 const stats = transactions.reduce((acc, transaction) => {
-                    console.log(`Upload: Processing transaction: ${transaction.id}, type: ${transaction.type}, amount: ${transaction.amount}`);
+                    console.log(`Upload: Processing transaction: ${transaction.transactionId}, type: ${transaction.type}, amount: ${transaction.amount}`);
 
                     if (transaction.type === 'RECEIVED') {
                         acc.income += transaction.amount;
@@ -106,7 +107,7 @@ export default function UploadPage() {
                     console.log('Upload: Starting to save transactions to database...');
 
                     // Get the authentication token
-                    const token = localStorage.getItem('token');
+                    const token = getToken();
                     if (!token) {
                         console.log('Upload: No token found, cannot save transactions');
                         throw new Error('Authentication token not found');

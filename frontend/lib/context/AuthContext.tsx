@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { getToken, setToken, removeToken, isAuthenticated } from '../../utils/auth';
 
 interface User {
     id: string;
@@ -28,52 +29,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        // Check for stored auth token and validate it
         const checkAuth = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    // For now, just extract user info from token
-                    // In a real app, you would validate the token with the backend
-                    try {
-                        const payload = JSON.parse(atob(token.split('.')[1]));
-                        if (payload && payload.id) {
-                            // Fetch user data from backend
-                            const response = await fetch(`${API_URL}/users/me`, {
-                                headers: {
-                                    'Authorization': `Bearer ${token}`
-                                }
-                            });
+                setLoading(true);
 
-                            if (response.ok) {
-                                const userData = await response.json();
-                                setUser(userData.user);
-                            } else {
-                                // Only remove token if response is 401 Unauthorized
-                                if (response.status === 401) {
-                                    localStorage.removeItem('token');
-                                } else {
-                                    // For other errors, keep the token and set user from payload
-                                    // This prevents logout on network issues
-                                    setUser({
-                                        id: payload.id,
-                                        name: payload.name || 'User',
-                                        email: payload.email || ''
-                                    });
-                                }
-                            }
-                        } else {
-                            localStorage.removeItem('token');
-                        }
+                if (isAuthenticated()) {
+                    const token = getToken();
+
+                    try {
+                        // Decode the token to get user info
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+
+                        // Set user from token payload
+                        setUser({
+                            id: payload.id,
+                            name: payload.name || 'User',
+                            email: payload.email || 'user@example.com'
+                        });
                     } catch (error) {
                         console.error('Token parsing error:', error);
-                        localStorage.removeItem('token');
+                        removeToken();
                     }
                 }
             } catch (error) {
                 console.error('Auth check failed:', error);
-                // Don't remove token on general errors
-                // localStorage.removeItem('token');
             } finally {
                 setLoading(false);
             }
@@ -85,47 +64,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = async (email: string, password: string) => {
         try {
             setLoading(true);
-            console.log("Attempting login with API URL:", API_URL);
 
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ email, password })
             });
 
-            // Log response status for debugging
-            console.log("Login response status:", response.status);
-
-            // Get response text first
-            const responseText = await response.text();
-            console.log("Response text preview:", responseText.substring(0, 150));
-
-            // Try to parse as JSON
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error("Failed to parse response as JSON:", parseError);
-                throw new Error("Server returned an invalid response. Please try again later.");
-            }
-
             if (!response.ok) {
-                throw new Error(data.message || data.error || 'Invalid email or password');
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Invalid email or password');
             }
 
-            localStorage.setItem('token', data.token);
+            const data = await response.json();
+
+            // Store token and user data
+            setToken(data.token);
             setUser({
                 id: data.user.id,
                 name: data.user.name,
                 email: data.user.email
             });
-            router.push('/dashboard');
-        } catch (error: any) {
-            console.error('Login failed:', error);
-            throw new Error(error.message || 'Invalid email or password. Please try again.');
+
+            // Debug router
+            console.log('Login successful, redirecting to dashboard...');
+            console.log('Router object:', router);
+
+            // Redirect to dashboard with a slight delay to ensure state is updated
+            setTimeout(() => {
+                router.push('/dashboard');
+            }, 100);
+
+            return data;
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
         } finally {
             setLoading(false);
         }
@@ -134,47 +109,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signup = async (name: string, email: string, password: string, phoneNumber?: string) => {
         try {
             setLoading(true);
-            console.log("Attempting signup with API URL:", API_URL);
 
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ name, email, password, phoneNumber })
             });
 
-            // Log response status for debugging
-            console.log("Signup response status:", response.status);
-
-            // Get response text first
-            const responseText = await response.text();
-            console.log("Response text preview:", responseText.substring(0, 150));
-
-            // Try to parse as JSON
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error("Failed to parse response as JSON:", parseError);
-                throw new Error("Server returned an invalid response. Please try again later.");
-            }
-
             if (!response.ok) {
-                throw new Error(data.message || data.error || 'Failed to create account');
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create account');
             }
 
-            localStorage.setItem('token', data.token);
+            const data = await response.json();
+
+            // Store token and user data
+            setToken(data.token);
             setUser({
                 id: data.user.id,
                 name: data.user.name,
                 email: data.user.email
             });
+
+            // Redirect to dashboard
             router.push('/dashboard');
-        } catch (error: any) {
-            console.error('Signup failed:', error);
-            throw new Error(error.message || 'Failed to create account. Please try again.');
+
+            return data;
+        } catch (error) {
+            console.error('Signup error:', error);
+            throw error;
         } finally {
             setLoading(false);
         }
@@ -182,8 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         try {
-            // Just remove the token, no need to call backend
-            localStorage.removeItem('token');
+            removeToken();
             setUser(null);
             router.push('/');
         } catch (error) {
