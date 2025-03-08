@@ -1,26 +1,15 @@
 {
   "pages": {
-    "/auth/login/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/auth/login/page.js"
-    ],
-    "/auth/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/auth/layout.css",
-      "static/chunks/app/auth/layout.js"
+      "static/chunks/app/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
-    ],
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
     ],
     "/dashboard/page": [
       "static/chunks/webpack.js",
@@ -33,6 +22,17 @@
       "static/css/app/dashboard/layout.css",
       "static/chunks/app/dashboard/layout.js"
     ],
+    "/auth/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/auth/login/page.js"
+    ],
+    "/auth/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/auth/layout.css",
+      "static/chunks/app/auth/layout.js"
+    ],
     "/dashboard/upload/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -43,10 +43,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/ai-chat/page.js"
     ],
-    "/auth/signup/page": [
+    "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/auth/signup/page.js"
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

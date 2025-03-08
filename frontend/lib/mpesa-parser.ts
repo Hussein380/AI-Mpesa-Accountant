@@ -9,7 +9,7 @@ export interface MpesaTransaction {
     sender?: string;
     phoneNumber?: string;
     date: Date;
-    balance: number;
+    balance?: number;
     description?: string;
 }
 
@@ -106,6 +106,11 @@ export function parseMpesaSms(smsText: string): MpesaTransaction[] {
  * @returns Formatted amount string
  */
 export function formatCurrency(amount: number): string {
+    // Handle undefined, null, or NaN values
+    if (amount === undefined || amount === null || isNaN(amount)) {
+        return 'Ksh 0.00';
+    }
+
     // Check if we're in a browser environment
     const isBrowser = typeof window !== 'undefined';
 

@@ -2,40 +2,49 @@ const Transaction = require('../models/Transaction.js');
 
 const getTransactions = async (req, res) => {
     try {
-        const userId = req.user?._id;
-        if (!userId) {
-            console.log('getTransactions: No user ID found in request');
-            return res.status(401).json({ message: 'User not authenticated' });
-        }
+        const userId = req.user.id;
+        console.log('getTransactions: Processing request for user:', userId);
 
-        console.log('getTransactions: Processing request for user:', userId.toString());
+        // Build query
+        const query = { user: userId };
+        console.log('getTransactions: Query:', JSON.stringify(query));
 
+        // Pagination
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
-        const startDate = req.query.startDate ? new Date(req.query.startDate) : undefined;
-        const endDate = req.query.endDate ? new Date(req.query.endDate) : undefined;
-
-        const query = { user: userId };
-        if (startDate && endDate) {
-            query.date = { $gte: startDate, $lte: endDate };
-        }
-
-        console.log('getTransactions: Query:', JSON.stringify(query));
+        const skip = (page - 1) * limit;
         console.log('getTransactions: Pagination:', { page, limit });
 
-        // First check if user has any transactions
-        const totalCount = await Transaction.countDocuments({ user: userId });
+        // Get total count for pagination - using a more compatible approach
+        let totalCount = 0;
+        try {
+            // Try the most modern approach first
+            totalCount = await Transaction.find({ user: userId }).countDocuments();
+        } catch (countError) {
+            try {
+                // Fall back to count() if countDocuments() is not available
+                totalCount = await Transaction.find({ user: userId }).count();
+            } catch (fallbackError) {
+                // Last resort: get all documents and count them in memory
+                const allDocs = await Transaction.find({ user: userId });
+                totalCount = allDocs.length;
+            }
+        }
         console.log('getTransactions: Total transactions for user:', totalCount);
-        
+
         if (totalCount === 0) {
             console.log('getTransactions: No transactions found for user');
-            return res.json({
-                transactions: [],
-                stats: { income: 0, expenses: 0 },
-                pagination: {
-                    total: 0,
-                    page,
-                    pages: 0
+            return res.status(200).json({ 
+                transactions: [], 
+                pagination: { 
+                    total: 0, 
+                    page, 
+                    pages: 0 
+                },
+                stats: {
+                    income: 0,
+                    expenses: 0,
+                    balance: 0
                 }
             });
         }
@@ -43,10 +52,24 @@ const getTransactions = async (req, res) => {
         // Get transactions with pagination
         const transactions = await Transaction.find(query)
             .sort({ date: -1 })
-            .skip((page - 1) * limit)
+            .skip(skip)
             .limit(limit);
 
-        const total = await Transaction.countDocuments(query);
+        // Get filtered count - using a more compatible approach
+        let total = 0;
+        try {
+            // Try the most modern approach first
+            total = await Transaction.find(query).countDocuments();
+        } catch (countError) {
+            try {
+                // Fall back to count() if countDocuments() is not available
+                total = await Transaction.find(query).count();
+            } catch (fallbackError) {
+                // Last resort: get all documents and count them in memory
+                const allDocs = await Transaction.find(query);
+                total = allDocs.length;
+            }
+        }
 
         console.log('getTransactions: Found transactions:', transactions.length);
         console.log('getTransactions: Total matching query:', total);
@@ -69,6 +92,21 @@ const getTransactions = async (req, res) => {
             { income: 0, expenses: 0 }
         );
         
+        // Calculate balance from the most recent transaction or from income - expenses
+        let balance = stats.income - stats.expenses;
+        
+        // Try to get balance from the most recent transaction if available
+        const latestTransaction = await Transaction.findOne({ user: userId })
+            .sort({ date: -1 })
+            .limit(1);
+            
+        if (latestTransaction && latestTransaction.balance) {
+            balance = latestTransaction.balance;
+        }
+        
+        // Add balance to stats
+        stats.balance = balance;
+        
         console.log('getTransactions: Calculated stats:', JSON.stringify(stats));
 
         res.json({
@@ -82,7 +120,7 @@ const getTransactions = async (req, res) => {
         });
     } catch (error) {
         console.error('getTransactions: Error fetching transactions:', error);
-        res.status(500).json({ message: 'Error fetching transactions' });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -217,13 +255,15 @@ const bulkCreateTransactions = async (req, res) => {
         const transactions = req.body.transactions.map((transaction) => ({
             ...transaction,
             user: userId,
-            date: new Date(transaction.date)
+            date: new Date(transaction.date),
+            // Ensure mpesaReference is undefined rather than null to avoid index issues
+            mpesaReference: transaction.mpesaReference || undefined
         }));
 
         console.log('bulkCreateTransactions: Formatted transactions for database, count:', transactions.length);
         console.log('bulkCreateTransactions: Sample formatted transaction:', JSON.stringify(transactions[0]));
 
-        // Check for duplicate transactionIds
+        // Check for duplicate transactionIds within the request
         const transactionIds = transactions.map((t) => t.transactionId);
         const uniqueIds = new Set(transactionIds);
         
@@ -259,27 +299,54 @@ const bulkCreateTransactions = async (req, res) => {
                 });
             }
             
-            // Insert only new transactions
-            const result = await Transaction.insertMany(newTransactions);
-            console.log('bulkCreateTransactions: Inserted new transactions, count:', result.length);
-            
-            return res.status(201).json({
-                message: 'Partial transactions created successfully',
-                count: result.length,
-                existing: existingTransactions.length,
-                transactions: result
-            });
+            // Insert only new transactions - use insertMany with ordered: false to continue on error
+            try {
+                const result = await Transaction.insertMany(newTransactions, { ordered: false });
+                console.log('bulkCreateTransactions: Inserted new transactions, count:', result.length);
+                
+                return res.status(201).json({
+                    message: 'Partial transactions created successfully',
+                    count: result.length,
+                    existing: existingTransactions.length,
+                    transactions: result
+                });
+            } catch (insertError) {
+                // If there's a bulk write error but some documents were inserted
+                if (insertError.name === 'MongoBulkWriteError' && insertError.result) {
+                    console.log('bulkCreateTransactions: Partial insert success:', insertError.result.insertedCount);
+                    return res.status(201).json({
+                        message: 'Some transactions created successfully',
+                        count: insertError.result.insertedCount,
+                        existing: existingTransactions.length,
+                        error: insertError.message
+                    });
+                }
+                throw insertError;
+            }
         }
 
-        // Insert all transactions if none exist
-        const result = await Transaction.insertMany(transactions);
-        console.log('bulkCreateTransactions: Inserted all transactions, count:', result.length);
-        
-        res.status(201).json({
-            message: 'Transactions created successfully',
-            count: result.length,
-            transactions: result
-        });
+        // Insert all transactions if none exist - use insertMany with ordered: false to continue on error
+        try {
+            const result = await Transaction.insertMany(transactions, { ordered: false });
+            console.log('bulkCreateTransactions: Inserted all transactions, count:', result.length);
+            
+            res.status(201).json({
+                message: 'Transactions created successfully',
+                count: result.length,
+                transactions: result
+            });
+        } catch (insertError) {
+            // If there's a bulk write error but some documents were inserted
+            if (insertError.name === 'MongoBulkWriteError' && insertError.result) {
+                console.log('bulkCreateTransactions: Partial insert success:', insertError.result.insertedCount);
+                return res.status(201).json({
+                    message: 'Some transactions created successfully',
+                    count: insertError.result.insertedCount,
+                    error: insertError.message
+                });
+            }
+            throw insertError;
+        }
     } catch (error) {
         console.error('bulkCreateTransactions: Error creating transactions:', error);
         res.status(500).json({ message: 'Error creating transactions' });

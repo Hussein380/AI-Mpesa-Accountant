@@ -57,11 +57,12 @@ const TransactionSchema = new Schema({
         type: Date,
         default: Date.now
     },
-    // Add mpesaReference field with default null to handle existing index
+    // Update mpesaReference field to handle null values better
     mpesaReference: {
         type: String,
-        default: null,
-        sparse: true // Make the index sparse to allow multiple null values
+        default: undefined,  // Use undefined instead of null
+        index: false,  // Remove direct index on this field
+        sparse: false  // Remove sparse option since we're not indexing directly
     }
 });
 
@@ -70,6 +71,13 @@ TransactionSchema.index({ user: 1, date: -1 });
 
 // Add compound index for user + transactionId for efficient lookups and to prevent duplicates per user
 TransactionSchema.index({ user: 1, transactionId: 1 }, { unique: true });
+
+// Create a compound index for mpesaReference + user if mpesaReference is needed for lookups
+TransactionSchema.index({ mpesaReference: 1, user: 1 }, { 
+    unique: true,
+    sparse: true,  // Only index documents where mpesaReference exists
+    partialFilterExpression: { mpesaReference: { $exists: true, $ne: null, $ne: '' } }
+});
 
 // Drop the problematic mpesaReference index if it exists
 const Transaction = mongoose.model('Transaction', TransactionSchema);
@@ -83,6 +91,14 @@ mongoose.connection.on('connected', async () => {
     } catch (error) {
         // Index might not exist, which is fine
         console.log('Note: mpesaReference index might not exist or was already dropped');
+    }
+    
+    try {
+        await mongoose.connection.db.collection('transactions').dropIndex('phoneNumber_1');
+        console.log('Dropped phoneNumber index successfully');
+    } catch (error) {
+        // Index might not exist, which is fine
+        console.log('Note: phoneNumber index might not exist or was already dropped');
     }
 });
 

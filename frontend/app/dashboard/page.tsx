@@ -29,6 +29,7 @@ export default function Dashboard() {
         const fetchTransactions = async () => {
             console.log('Dashboard: Starting to fetch transactions...')
             setLoading(true)
+            setError(null) // Clear any previous errors
 
             try {
                 // Get token from auth utility
@@ -51,13 +52,17 @@ export default function Dashboard() {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    cache: 'no-store' // Ensure we don't use cached data
+                    cache: 'no-store', // Ensure we don't use cached data
+                    // Add timeout to prevent hanging requests
+                    signal: AbortSignal.timeout(15000) // 15 second timeout
                 })
 
                 console.log('Dashboard: Response status:', response.status)
 
                 if (!response.ok) {
-                    throw new Error(`Error connecting to API: ${response.statusText}`)
+                    const errorText = await response.text();
+                    console.error('Dashboard: API error response:', errorText);
+                    throw new Error(`Error connecting to API: ${response.status} ${response.statusText}`);
                 }
 
                 // Get response text first for debugging
@@ -77,7 +82,7 @@ export default function Dashboard() {
                 if (!data.transactions) {
                     console.log('Dashboard: No transactions array in response')
                     setTransactions([])
-                    setStats({ income: 0, expenses: 0 })
+                    setStats({ income: 0, expenses: 0, balance: 0, count: 0 })
                     setLoading(false)
                     return
                 }
@@ -87,11 +92,20 @@ export default function Dashboard() {
                 if (data.transactions.length === 0) {
                     console.log('Dashboard: No transactions found in response')
                     setTransactions([])
-                    setStats({ income: 0, expenses: 0 })
+                    setStats({ income: 0, expenses: 0, balance: 0, count: 0 })
                 } else {
                     console.log('Dashboard: Processing transactions from response')
                     setTransactions(data.transactions)
-                    setStats(data.stats || { income: 0, expenses: 0 })
+
+                    // Ensure stats has all required fields with defaults
+                    const receivedStats = data.stats || { income: 0, expenses: 0 }
+                    const completeStats = {
+                        income: receivedStats.income || 0,
+                        expenses: receivedStats.expenses || 0,
+                        balance: receivedStats.balance || 0,
+                        count: data.transactions.length
+                    }
+                    setStats(completeStats)
                 }
 
                 // Update pagination
@@ -99,7 +113,12 @@ export default function Dashboard() {
 
             } catch (error) {
                 console.error('Dashboard: Error fetching transactions:', error)
-                setError(`Error fetching transactions: ${error.message}`)
+                // Check if it's a network error
+                if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                    setError('Unable to connect to the server. Please check your internet connection or try again later.')
+                } else {
+                    setError(`Error fetching transactions: ${error.message}`)
+                }
             } finally {
                 console.log('Dashboard: Fetch completed, loading set to false')
                 setLoading(false)
@@ -109,11 +128,11 @@ export default function Dashboard() {
         console.log('Dashboard: useEffect triggered, calling fetchTransactions')
         fetchTransactions()
 
-        // Set up refresh interval
+        // Set up refresh interval - reduced from 30 seconds to 60 seconds to reduce server load
         const interval = setInterval(() => {
             console.log('Dashboard: Refresh interval triggered')
             fetchTransactions()
-        }, 30000) // Refresh every 30 seconds
+        }, 60000) // Refresh every 60 seconds instead of 30
 
         // Clean up the interval on component unmount
         return () => {
@@ -197,7 +216,9 @@ export default function Dashboard() {
                 >
                     <h3 className="text-base sm:text-lg font-medium mb-1 sm:mb-2">Balance</h3>
                     <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-400 break-words">
-                        {formatCurrency(stats.balance)}
+                        {stats.balance !== undefined && stats.balance !== null
+                            ? formatCurrency(stats.balance)
+                            : formatCurrency(stats.income - stats.expenses)}
                     </p>
                 </motion.div>
             </div>
@@ -223,6 +244,21 @@ export default function Dashboard() {
                 <div className="flex justify-center items-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
+            ) : error ? (
+                <motion.div
+                    className="bg-red-900/30 text-red-200 rounded-lg p-4 mb-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <p>{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="mt-2 px-3 py-1 bg-red-800 hover:bg-red-700 rounded-md text-sm"
+                    >
+                        Retry
+                    </button>
+                </motion.div>
             ) : transactions.length > 0 ? (
                 <motion.div
                     className="bg-gray-800 rounded-lg p-3 sm:p-4 md:p-6 shadow-md mb-6 sm:mb-8"

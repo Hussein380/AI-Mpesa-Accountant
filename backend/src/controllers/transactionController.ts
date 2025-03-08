@@ -4,39 +4,35 @@ import { AuthRequest } from '../middleware/auth';
 
 export const getTransactions = async (req: AuthRequest, res: Response) => {
     try {
-        const userId = req.user?._id;
-        if (!userId) {
-            console.log('getTransactions: No user ID found in request');
-            return res.status(401).json({ message: 'User not authenticated' });
-        }
+        const userId = req.user.id;
+        console.log('getTransactions: Processing request for user:', userId);
 
-        console.log('getTransactions: Processing request for user:', userId.toString());
+        // Build query
+        const query = { user: userId };
+        console.log('getTransactions: Query:', JSON.stringify(query));
 
+        // Pagination
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
-        const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
-        const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
-
-        const query: any = { user: userId };
-        if (startDate && endDate) {
-            query.date = { $gte: startDate, $lte: endDate };
-        }
-
-        console.log('getTransactions: Query:', JSON.stringify(query));
+        const skip = (page - 1) * limit;
         console.log('getTransactions: Pagination:', { page, limit });
 
-        // First check if user has any transactions
-        const totalCount = await Transaction.countDocuments({ user: userId });
+        // Get total count for pagination - using countDocuments on the find query
+        const totalCount = await Transaction.find({ user: userId }).countDocuments();
         console.log('getTransactions: Total transactions for user:', totalCount);
 
         if (totalCount === 0) {
             console.log('getTransactions: No transactions found for user');
-            return res.json({
+            return res.status(200).json({
                 transactions: [],
                 pagination: {
                     total: 0,
                     page,
                     pages: 0
+                },
+                stats: {
+                    income: 0,
+                    expenses: 0
                 }
             });
         }
@@ -44,10 +40,11 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
         // Get transactions with pagination
         const transactions = await Transaction.find(query)
             .sort({ date: -1 })
-            .skip((page - 1) * limit)
+            .skip(skip)
             .limit(limit);
 
-        const total = await Transaction.countDocuments(query);
+        // Get filtered count - using countDocuments on the find query
+        const total = await Transaction.find(query).countDocuments();
 
         console.log('getTransactions: Found transactions:', transactions.length);
         console.log('getTransactions: Total matching query:', total);
@@ -83,7 +80,7 @@ export const getTransactions = async (req: AuthRequest, res: Response) => {
         });
     } catch (error) {
         console.error('getTransactions: Error fetching transactions:', error);
-        res.status(500).json({ message: 'Error fetching transactions' });
+        res.status(500).json({ message: 'Server error' });
     }
 };
 

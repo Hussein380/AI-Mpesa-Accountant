@@ -19,11 +19,11 @@ const checkMessageLimit = async (req: express.Request, res: express.Response, ne
     }
 
     // Count messages for this session
-    const messageCount = await ChatMessage.countDocuments({
+    const messageCount = await ChatMessage.find({
         sessionId,
         role: 'user',
         createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
-    });
+    }).countDocuments();
 
     const maxFreeMessages = parseInt(process.env.MAX_FREE_MESSAGES || '4');
     if (messageCount >= maxFreeMessages) {

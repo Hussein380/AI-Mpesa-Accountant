@@ -15,8 +15,7 @@ mongoose.connect(process.env.MONGODB_URI)
       console.log(`Testing transactions for user: ${userId}`);
       
       // Count transactions for user
-      const count = await Transaction.countDocuments({ user: userId });
-      console.log(`Found ${count} transactions for user`);
+      const count = await getTransactionCount(userId);
       
       // Get sample transactions
       const transactions = await Transaction.find({ user: userId }).limit(5);
@@ -56,4 +55,15 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch(err => {
     console.error('MongoDB connection error:', err);
     process.exit(1);
-  }); 
+  });
+
+async function getTransactionCount(userId) {
+    try {
+        const count = await Transaction.find({ user: userId }).countDocuments();
+        console.log(`Total transactions for user ${userId}: ${count}`);
+        return count;
+    } catch (error) {
+        console.error('Error counting transactions:', error);
+        throw error;
+    }
+} 
