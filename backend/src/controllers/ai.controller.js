@@ -1,7 +1,10 @@
-// We'll use dynamic import for Ollama later
-// const ollama = require('ollama');
+// Import Gemini service
+const geminiService = require('../services/gemini.service');
 const User = require('../models/user.model');
 const ChatSession = require('../models/chat.model');
+
+// Define constants
+const FREE_MESSAGE_LIMIT = parseInt(process.env.MAX_FREE_MESSAGES) || 3;
 
 /**
  * Chat with AI
@@ -16,9 +19,7 @@ exports.chatCompletion = async (req, res) => {
       // For free chat, check if the IP has exceeded the free message limit
       const ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
       
-      // In a real implementation, you would track IP-based usage in a database
-      // For now, we'll just simulate the check
-      const FREE_MESSAGE_LIMIT = 3;
+      // Get the free message limit from environment variables or use default
       const usedMessages = req.session?.messageCount || 0;
       
       if (usedMessages >= FREE_MESSAGE_LIMIT) {
@@ -33,9 +34,20 @@ exports.chatCompletion = async (req, res) => {
       req.session.messageCount = (req.session.messageCount || 0) + 1;
     }
 
-    // In a production environment, we would use Ollama to generate a response
-    // For now, we'll simulate the AI response
-    const aiResponse = simulateAIResponse(message);
+    // Get conversation history if sessionId is provided
+    let history = [];
+    if (sessionId) {
+      const chatSession = await ChatSession.findById(sessionId);
+      if (chatSession && chatSession.messages) {
+        history = chatSession.messages.map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }));
+      }
+    }
+
+    // Generate AI response using Gemini
+    const aiResponse = await geminiService.generateChatResponse(message, history);
     
     // Save the chat message to the database if user is authenticated
     if (userId && sessionId) {
@@ -73,29 +85,40 @@ exports.analyzeStatement = async (req, res) => {
     const { statementId } = req.body;
     const userId = req.user.id;
 
-    // In a real implementation, you would:
-    // 1. Retrieve the statement from the database
-    // 2. Process it with Ollama or another AI model
-    // 3. Return insights
+    // Get the statement from the database
+    const Statement = require('../models/statement.model');
+    const statement = await Statement.findOne({
+      _id: statementId,
+      user: userId
+    });
 
-    // For now, we'll return simulated insights
-    const insights = {
-      totalIncome: 45000,
-      totalExpenses: 32500,
-      balance: 12500,
-      topCategories: [
-        { name: 'Food', amount: 8500 },
-        { name: 'Transport', amount: 6200 },
-        { name: 'Entertainment', amount: 4800 },
-        { name: 'Utilities', amount: 3500 },
-        { name: 'Shopping', amount: 2800 }
-      ],
-      savingsTrend: [
-        { month: 'January', amount: 8000 },
-        { month: 'February', amount: 9500 },
-        { month: 'March', amount: 12500 }
-      ]
-    };
+    if (!statement) {
+      return res.status(404).json({ message: 'Statement not found' });
+    }
+
+    // Get transactions linked to this statement
+    const Transaction = require('../models/Transaction');
+    const transactions = await Transaction.find({
+      user: userId,
+      statement: statementId
+    });
+
+    if (transactions.length === 0) {
+      // If no transactions are linked to the statement, return a message
+      return res.status(400).json({ message: 'No transactions found for this statement' });
+    }
+
+    // Use Gemini to analyze transactions
+    const insights = await geminiService.analyzeTransactions(transactions);
+
+    // Update statement with analysis results
+    await Statement.findByIdAndUpdate(statementId, {
+      isAnalyzed: true,
+      totalIncome: insights.totalIncome,
+      totalExpenses: insights.totalExpenses,
+      finalBalance: insights.balance,
+      analysisResults: insights
+    });
 
     res.json({
       message: 'Statement analyzed successfully',
@@ -108,22 +131,47 @@ exports.analyzeStatement = async (req, res) => {
 };
 
 /**
- * Simulate AI response (temporary function until Ollama integration)
+ * Categorize transactions
  */
-function simulateAIResponse(userInput) {
-  const input = userInput.toLowerCase();
+exports.categorizeTransactions = async (req, res) => {
+  try {
+    const { transactionIds } = req.body;
+    const userId = req.user.id;
 
-  if (input.includes('spend') && input.includes('food')) {
-    return "Based on your M-Pesa statements, you spent KSh 12,450 on food last month. This is about 15% of your total spending.";
-  } else if (input.includes('largest transaction')) {
-    return "Your largest transaction in the past week was KSh 5,000 sent to John Doe on Monday, June 10th.";
-  } else if (input.includes('savings')) {
-    return "Your savings have increased by 8% over the past 3 months. You saved KSh 8,000 in April, KSh 9,200 in May, and KSh 10,500 in June.";
-  } else if (input.includes('family')) {
-    return "Last month, you sent a total of KSh 15,000 to contacts tagged as 'Family'. This includes KSh 8,000 to Mom, KSh 5,000 to Dad, and KSh 2,000 to Sister.";
-  } else if (input.includes('categories') || input.includes('spending')) {
-    return "Your top spending categories last month were: 1. Utilities (KSh 18,500), 2. Food (KSh 12,450), 3. Transport (KSh 8,300), 4. Entertainment (KSh 5,200), and 5. Shopping (KSh 4,100).";
-  } else {
-    return "I don't have enough information to answer that question yet. Please upload your M-Pesa statements for more detailed insights.";
+    if (!transactionIds || !Array.isArray(transactionIds)) {
+      return res.status(400).json({ message: 'Transaction IDs are required' });
+    }
+
+    const Transaction = require('../models/Transaction');
+    const transactions = await Transaction.find({
+      _id: { $in: transactionIds },
+      user: userId
+    });
+
+    if (transactions.length === 0) {
+      return res.status(404).json({ message: 'No transactions found' });
+    }
+
+    // Process each transaction
+    const results = [];
+    for (const transaction of transactions) {
+      const category = await geminiService.categorizeTransaction(transaction);
+      
+      // Update transaction with category
+      await Transaction.findByIdAndUpdate(transaction._id, { category });
+      
+      results.push({
+        transactionId: transaction._id,
+        category
+      });
+    }
+
+    res.json({
+      message: 'Transactions categorized successfully',
+      results
+    });
+  } catch (error) {
+    console.error('Transaction categorization error:', error);
+    res.status(500).json({ message: 'Server error during transaction categorization' });
   }
-} 
+}; 

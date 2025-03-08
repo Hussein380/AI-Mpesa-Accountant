@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation"
 import { useChat } from "@/lib/context/ChatContext"
 import { useAuth } from "@/lib/context/AuthContext"
 import { Button } from "@/components/ui/button"
+import ReactMarkdown from 'react-markdown'
+import type { Components } from 'react-markdown'
 
 const SAMPLE_QUESTIONS = [
     "How much did I spend on food last month?",
@@ -16,10 +18,37 @@ const SAMPLE_QUESTIONS = [
     "What are my top spending categories?",
 ]
 
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+// Custom components for markdown rendering
+const markdownComponents: Components = {
+    // Customize heading styles
+    h1: ({ node, ...props }) => <h1 className="text-xl font-bold my-2" {...props} />,
+    h2: ({ node, ...props }) => <h2 className="text-lg font-bold my-2" {...props} />,
+    h3: ({ node, ...props }) => <h3 className="text-md font-bold my-1" {...props} />,
+
+    // Customize paragraph styles
+    p: ({ node, ...props }) => <p className="mb-2" {...props} />,
+
+    // Customize list styles
+    ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-2" {...props} />,
+    ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-2" {...props} />,
+    li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+
+    // Customize emphasis styles
+    strong: ({ node, ...props }) => <strong className="font-bold text-blue-300" {...props} />,
+    em: ({ node, ...props }) => <em className="italic text-gray-300" {...props} />,
+
+    // Customize link styles
+    a: ({ node, ...props }) => <a className="text-blue-400 underline hover:text-blue-300" {...props} />,
+};
+
 export default function AIChatPage() {
-    const { messages, addMessage, remainingFreeMessages, isLoading } = useChat()
-    const { isAuthenticated } = useAuth()
+    const { messages, addMessage, remainingFreeMessages } = useChat()
+    const { isAuthenticated, user } = useAuth()
     const [input, setInput] = useState("")
+    const [loading, setLoading] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const router = useRouter()
 
@@ -44,28 +73,56 @@ export default function AIChatPage() {
         // Add user message
         await addMessage(input, "user")
         setInput("")
+        setLoading(true)
 
-        // Simulate AI response
-        setTimeout(async () => {
-            await addMessage(getAIResponse(input), "assistant")
-        }, 1500)
-    }
+        try {
+            // Determine which endpoint to use based on authentication status
+            const endpoint = isAuthenticated
+                ? `${API_BASE_URL}/ai/chat`
+                : `${API_BASE_URL}/ai/free-chat`;
 
-    const getAIResponse = (userInput: string): string => {
-        const input = userInput.toLowerCase()
+            // Set up headers
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+            };
 
-        if (input.includes("spend") && input.includes("food")) {
-            return "Based on your M-Pesa statements, you spent KSh 12,450 on food last month. This is about 15% of your total spending."
-        } else if (input.includes("largest transaction")) {
-            return "Your largest transaction in the past week was KSh 5,000 sent to John Doe on Monday, June 10th."
-        } else if (input.includes("savings")) {
-            return "Your savings have increased by 8% over the past 3 months. You saved KSh 8,000 in April, KSh 9,200 in May, and KSh 10,500 in June."
-        } else if (input.includes("family")) {
-            return "Last month, you sent a total of KSh 15,000 to contacts tagged as 'Family'. This includes KSh 8,000 to Mom, KSh 5,000 to Dad, and KSh 2,000 to Sister."
-        } else if (input.includes("categories") || input.includes("spending")) {
-            return "Your top spending categories last month were: 1. Utilities (KSh 18,500), 2. Food (KSh 12,450), 3. Transport (KSh 8,300), 4. Entertainment (KSh 5,200), and 5. Shopping (KSh 4,100)."
-        } else {
-            return "I don't have enough information to answer that question yet. Please upload your M-Pesa statements for more detailed insights."
+            // Add authorization header if authenticated
+            if (isAuthenticated) {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+            }
+
+            // Make API call to backend
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    message: input,
+                    sessionId: localStorage.getItem('chatSessionId') || undefined
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Save session ID if provided
+            if (data.sessionId && data.sessionId !== 'free-session') {
+                localStorage.setItem('chatSessionId', data.sessionId);
+            }
+
+            // Add AI response
+            await addMessage(data.message, "assistant");
+
+        } catch (error) {
+            console.error('Error sending message:', error);
+            await addMessage("Sorry, I'm having trouble connecting to the server. Please try again later.", "assistant");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -135,12 +192,22 @@ export default function AIChatPage() {
                                             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
-                                    <p className="text-sm sm:text-base break-words">{message.content}</p>
+                                    {message.role === "assistant" ? (
+                                        <div className="text-sm sm:text-base prose prose-invert max-w-none">
+                                            <ReactMarkdown
+                                                components={markdownComponents}
+                                            >
+                                                {message.content}
+                                            </ReactMarkdown>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm sm:text-base break-words">{message.content}</p>
+                                    )}
                                 </div>
                             </div>
                         ))}
 
-                        {isLoading && (
+                        {loading && (
                             <div className="flex justify-start">
                                 <div className="bg-gray-700 text-white rounded-2xl rounded-tl-none px-3 sm:px-4 py-2 sm:py-3">
                                     <div className="flex items-center">

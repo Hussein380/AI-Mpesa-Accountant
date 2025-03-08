@@ -23,6 +23,14 @@ AI-Pesa is a financial management application that helps users track and analyze
 │  - Protected    │      │    Processing   │      │  - Transaction  │
 │    Routes       │      │  - AI Chat      │      │  - Message      │
 └─────────────────┘      └─────────────────┘      └─────────────────┘
+                                 │
+                                 ▼
+                         ┌─────────────────┐
+                         │  Gemini AI      │
+                         │  Integration    │
+                         │  - Chat         │
+                         │  - Analysis     │
+                         └─────────────────┘
 ```
 
 ## Frontend Architecture
@@ -105,6 +113,12 @@ The backend is built with Express.js and follows a modular architecture.
    - Error handling middleware
    - Request logging middleware
 
+6. **Gemini AI Service**
+   - Handles communication with Google's Gemini AI
+   - Processes natural language queries
+   - Analyzes transaction data
+   - Categorizes transactions
+
 ### API Structure
 
 ```
@@ -121,6 +135,9 @@ The backend is built with Express.js and follows a modular architecture.
 │   ├── upload
 │   └── process-sms
 └── transactions
+    ├── /
+    ├── /:id
+    └── /categorize
 ```
 
 ## Data Flow
@@ -144,7 +161,9 @@ The backend is built with Express.js and follows a modular architecture.
    - Frontend checks authentication status
    - For non-authenticated users, message count is checked
    - Message is sent to backend
-   - Backend processes message and generates response
+   - Backend retrieves relevant transaction data
+   - Backend sends message and context to Gemini AI
+   - Gemini AI generates response
    - Response is returned to frontend and displayed
    - Message history is updated
 

@@ -7,6 +7,7 @@ This guide provides instructions for setting up and running the AI-Pesa applicat
 - Node.js (v16 or higher)
 - MongoDB (v4.4 or higher)
 - npm or yarn
+- Google AI Studio account (for Gemini API key)
 
 ## Project Structure
 
@@ -23,6 +24,8 @@ PORT=5000
 MONGODB_URI=mongodb://localhost:27017/ai-pesa
 JWT_SECRET=your_jwt_secret_key
 JWT_EXPIRE=30d
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-pro
 ```
 
 ### Frontend (.env.local file in frontend directory)
@@ -70,6 +73,13 @@ NEXT_PUBLIC_API_URL=http://localhost:5000/api
    ```
    npm run dev
    ```
+
+## Getting a Gemini API Key
+
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Create a new API key
+4. Add the API key to your backend `.env` file
 
 ## Running the Application
 
@@ -153,9 +163,12 @@ Users can chat with an AI assistant to get insights about their financial data. 
 
 4. **Authentication Issues**: If authentication is not working, check that the JWT token is being properly stored in localStorage and included in API requests.
 
+5. **Gemini API Key**: If AI features aren't working, verify that your Gemini API key is valid and properly set in the `.env` file.
+
 ## Additional Resources
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Express.js Documentation](https://expressjs.com/)
 - [MongoDB Documentation](https://docs.mongodb.com/)
-- [JWT Documentation](https://jwt.io/introduction) 
+- [JWT Documentation](https://jwt.io/introduction)
+- [Google AI Gemini Documentation](https://ai.google.dev/docs/gemini_api) 

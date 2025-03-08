@@ -7,7 +7,7 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 ```
 ┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
 │                 │      │                 │      │                 │
-│  User Interface │◄────►│  Backend API    │◄────►│  Ollama AI      │
+│  User Interface │◄────►│  Backend API    │◄────►│  Gemini AI      │
 │  (Next.js)      │      │  (Express)      │      │  Engine         │
 │                 │      │                 │      │                 │
 └────────┬────────┘      └────────┬────────┘      └─────────────────┘
@@ -42,7 +42,7 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 - Frontend sends data to backend API
 - Backend processes the data:
   - Extracts transaction details
-  - Sends to Ollama for analysis and categorization
+  - Sends to Gemini AI for analysis and categorization
   - Stores processed transactions in MongoDB
 - Backend returns processed transaction data
 - Frontend displays transaction summary and details
@@ -52,7 +52,7 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 - Frontend sends message to backend API
 - Backend:
   - Retrieves relevant transaction data
-  - Constructs prompt for Ollama with transaction context
+  - Constructs prompt for Gemini AI with transaction context
   - Gets AI response
   - Stores the conversation in MongoDB
 - Backend returns AI response
@@ -64,7 +64,7 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 - Backend:
   - Aggregates transaction data
   - Calculates financial metrics
-  - Generates insights using Ollama
+  - Generates insights using Gemini AI
 - Backend returns report data
 - Frontend displays visualizations and insights
 
@@ -81,7 +81,7 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 ### Backend (Express)
 - **Authentication API**: Handles user management
 - **Transaction Processing**: Parses and stores transaction data
-- **Ollama Integration**: Connects to AI engine for analysis
+- **Gemini AI Integration**: Connects to AI engine for analysis
 - **Chat API**: Manages conversation flow
 - **Reporting API**: Generates financial summaries
 
@@ -91,7 +91,7 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 - Preserves chat history
 - Caches financial reports
 
-### AI Engine (Ollama)
+### AI Engine (Gemini AI)
 - Processes natural language
 - Analyzes transaction patterns
 - Categorizes financial activities
@@ -105,8 +105,8 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 1. User uploads M-Pesa statement PDF
 2. Frontend sends file to `/api/transactions/upload` endpoint
 3. Backend extracts text from PDF
-4. Backend sends transaction text to Ollama for processing
-5. Ollama identifies and categorizes each transaction
+4. Backend sends transaction text to Gemini AI for processing
+5. Gemini AI identifies and categorizes each transaction
 6. Backend stores processed transactions in MongoDB
 7. Backend returns transaction summary to frontend
 8. Frontend displays categorized transactions and summary
@@ -116,8 +116,8 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 1. User asks: "How much did I spend on food last month?"
 2. Frontend sends message to `/api/chat/message` endpoint
 3. Backend retrieves user's food-related transactions for last month
-4. Backend constructs prompt for Ollama with transaction data
-5. Ollama generates response with spending analysis
+4. Backend constructs prompt for Gemini AI with transaction data
+5. Gemini AI generates response with spending analysis
 6. Backend stores the conversation in chat history
 7. Backend returns AI response to frontend
 8. Frontend displays the response in chat interface
@@ -140,12 +140,12 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
   - Deploy Node.js Express application
   - Configure environment variables
   - Set up MongoDB Atlas connection
-  - Configure Ollama integration
+  - Configure Gemini AI integration
 
-### Ollama Deployment
-- **Self-hosted**: Run on dedicated server with GPU
-- **Cloud VM**: Deploy on cloud provider with GPU support
-- **Managed AI Service**: Alternative to self-hosting
+### Gemini AI Integration
+- **Google AI Studio**: Set up API key in Google AI Studio
+- **Environment Variables**: Configure API key in backend environment
+- **No Self-Hosting Required**: Cloud-based service, no need for local deployment
 
 ## Security Considerations
 
@@ -193,15 +193,16 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
    npm run dev
    ```
 
-4. Install and run Ollama:
+4. Set up Gemini AI:
    ```
-   # Follow instructions at https://github.com/ollama/ollama
-   ollama pull llama3:8b
-   ollama run llama3:8b
+   # Get API key from Google AI Studio
+   # Add to backend/.env file:
+   GEMINI_API_KEY=your_api_key_here
+   GEMINI_MODEL=gemini-pro
    ```
 
 5. Configure environment variables as needed
 
 ## Conclusion
 
-The AI-Pesa system provides a seamless experience for users to manage their M-Pesa transactions with AI assistance. By combining a modern Next.js frontend with a robust Express backend and powerful Ollama AI engine, the system delivers valuable financial insights without requiring manual data entry or analysis. 
+The AI-Pesa system provides a seamless experience for users to manage their M-Pesa transactions with AI assistance. By combining a modern Next.js frontend with a robust Express backend and powerful Gemini AI engine, the system delivers valuable financial insights without requiring manual data entry or analysis. 
