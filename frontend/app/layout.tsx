@@ -1,21 +1,16 @@
-import type React from "react"
+"use client"
+
 import "./globals.css"
 import { Inter } from "next/font/google"
 import { Providers } from "./Providers"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export const metadata = {
+// Metadata needs to be in a separate file or a server component
+// since 'use client' directive makes this a client component
+const siteConfig = {
   title: "AI-Pesa: Your AI-Powered M-Pesa Accountant",
   description: "Track your transactions, get instant insights, and manage your money—all with AI-Pesa!",
-  generator: 'v0.dev'
-}
-
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false
 }
 
 export default function RootLayout({
@@ -25,6 +20,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <title>{siteConfig.title}</title>
+        <meta name="description" content={siteConfig.description} />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+      </head>
       <body className={inter.className}>
         <Providers>
           {children}

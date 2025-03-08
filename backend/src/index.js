@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const aiRoutes = require('./routes/ai.routes');
 const statementRoutes = require('./routes/statement.routes');
+const transactionsRoutes = require('./routes/transactions.js');
 
 // Initialize express app
 const app = express();
@@ -61,11 +62,17 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Log all requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // Create uploads directory if it doesn't exist
 // Note: In Vercel, file uploads should be handled differently
@@ -83,6 +90,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/statements', statementRoutes);
+app.use('/api/transactions', transactionsRoutes);
 
 // Test route
 app.get('/api/test', (req, res) => {

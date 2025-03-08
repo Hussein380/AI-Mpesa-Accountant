@@ -49,8 +49,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                                 const userData = await response.json();
                                 setUser(userData.user);
                             } else {
-                                localStorage.removeItem('token');
+                                // Only remove token if response is 401 Unauthorized
+                                if (response.status === 401) {
+                                    localStorage.removeItem('token');
+                                } else {
+                                    // For other errors, keep the token and set user from payload
+                                    // This prevents logout on network issues
+                                    setUser({
+                                        id: payload.id,
+                                        name: payload.name || 'User',
+                                        email: payload.email || ''
+                                    });
+                                }
                             }
+                        } else {
+                            localStorage.removeItem('token');
                         }
                     } catch (error) {
                         console.error('Token parsing error:', error);
@@ -59,7 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
             } catch (error) {
                 console.error('Auth check failed:', error);
-                localStorage.removeItem('token');
+                // Don't remove token on general errors
+                // localStorage.removeItem('token');
             } finally {
                 setLoading(false);
             }

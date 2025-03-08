@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { Upload, FileText, Check, AlertCircle, MessageSquare, FileUp } from "lucide-react"
 import { parseMpesaSms, MpesaTransaction } from "@/lib/mpesa-parser"
+import { toast } from "@/components/ui/use-toast"
 
 export default function UploadPage() {
     const [isDragging, setIsDragging] = useState(false)
@@ -69,31 +70,142 @@ export default function UploadPage() {
             // Process SMS messages
             else if (activeTab === "sms") {
                 // Parse the SMS messages
+                console.log('Upload: Starting to parse SMS messages...');
+                console.log('Upload: SMS text length:', smsText.length);
+
                 const transactions = parseMpesaSms(smsText);
+                console.log('Upload: Parsed transactions count:', transactions.length);
+
+                if (transactions.length === 0) {
+                    console.log('Upload: No transactions found in SMS text');
+                    setUploadStatus("error");
+                    return;
+                }
+
+                // Log a sample transaction
+                console.log('Upload: Sample parsed transaction:', JSON.stringify(transactions[0]));
 
                 // Calculate stats
                 const stats = transactions.reduce((acc, transaction) => {
+                    console.log(`Upload: Processing transaction: ${transaction.id}, type: ${transaction.type}, amount: ${transaction.amount}`);
+
                     if (transaction.type === 'RECEIVED') {
                         acc.income += transaction.amount;
+                        console.log(`Upload: Added ${transaction.amount} to income, new total: ${acc.income}`);
                     } else if (transaction.type === 'SENT') {
                         acc.expenses += transaction.amount;
+                        console.log(`Upload: Added ${transaction.amount} to expenses, new total: ${acc.expenses}`);
                     }
                     return acc;
                 }, { income: 0, expenses: 0, count: transactions.length });
 
-                // Store transactions in localStorage
-                const existingTransactions = JSON.parse(localStorage.getItem('mpesaTransactions') || '[]');
-                const updatedTransactions = [...existingTransactions, ...transactions];
-                localStorage.setItem('mpesaTransactions', JSON.stringify(updatedTransactions));
+                console.log('Upload: Calculated stats:', JSON.stringify(stats));
 
-                // Store stats in localStorage
-                const existingStats = JSON.parse(localStorage.getItem('mpesaStats') || '{"income": 0, "expenses": 0, "count": 0}');
-                const updatedStats = {
-                    income: existingStats.income + stats.income,
-                    expenses: existingStats.expenses + stats.expenses,
-                    count: existingStats.count + stats.count
-                };
-                localStorage.setItem('mpesaStats', JSON.stringify(updatedStats));
+                // Save transactions to database
+                try {
+                    console.log('Upload: Starting to save transactions to database...');
+
+                    // Get the authentication token
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        console.log('Upload: No token found, cannot save transactions');
+                        throw new Error('Authentication token not found');
+                    }
+                    console.log('Upload: Token found, proceeding with save');
+
+                    // Format transactions for the API
+                    const transactionsForApi = transactions.map(transaction => ({
+                        date: new Date(transaction.date),
+                        type: transaction.type,
+                        amount: transaction.amount,
+                        balance: transaction.balance,
+                        recipient: transaction.recipient,
+                        sender: transaction.sender,
+                        description: transaction.description,
+                        category: 'OTHER', // Default category, will be updated by AI later
+                        source: 'SMS', // Or 'PDF' depending on the source
+                        transactionId: transaction.transactionId // Make sure to include the transactionId field
+                    }));
+
+                    console.log('Upload: Formatted transactions for API, count:', transactionsForApi.length);
+                    console.log('Upload: Sample API transaction:', JSON.stringify(transactionsForApi[0]));
+
+                    // Send transactions to the backend
+                    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/transactions/bulk`;
+                    console.log('Upload: Sending transactions to URL:', apiUrl);
+                    console.log('Upload: Request body:', JSON.stringify({ transactions: transactionsForApi }));
+
+                    let response;
+                    try {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ transactions: transactionsForApi })
+                        });
+
+                        console.log('Upload: Response status:', response.status);
+                        console.log('Upload: Response status text:', response.statusText);
+                    } catch (fetchError) {
+                        console.error('Upload: Fetch error:', fetchError);
+                        throw new Error(`Error connecting to API: ${fetchError.message}`);
+                    }
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Upload: API error response:', errorText);
+                        console.error('Upload: Request that caused error:', {
+                            url: apiUrl,
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer [REDACTED]'
+                            },
+                            body: JSON.stringify({ transactions: transactionsForApi })
+                        });
+                        throw new Error(`Error saving transactions: ${response.statusText}`);
+                    }
+
+                    // Get response text first for debugging
+                    const responseText = await response.text();
+                    console.log('Upload: Response text preview:', responseText.substring(0, 150));
+
+                    // Try to parse as JSON
+                    let result;
+                    try {
+                        result = JSON.parse(responseText);
+                    } catch (parseError) {
+                        console.error("Upload: Failed to parse response as JSON:", parseError);
+                        throw new Error("Server returned an invalid response");
+                    }
+
+                    console.log('Upload: Transactions saved to database, count:', result.count || 0);
+
+                    // Show success message
+                    toast({
+                        title: "Success",
+                        description: `${transactions.length} transactions saved to database`,
+                        variant: "default"
+                    });
+
+                    // Redirect to dashboard after a short delay
+                    console.log('Upload: Redirecting to dashboard in 1.5 seconds...');
+                    setTimeout(() => {
+                        // Force a hard refresh to ensure data is reloaded
+                        const redirectUrl = `/dashboard?refresh=${new Date().getTime()}`;
+                        console.log('Upload: Redirecting to:', redirectUrl);
+                        window.location.href = redirectUrl;
+                    }, 1500);
+                } catch (error) {
+                    console.error('Error saving transactions to database:', error);
+                    toast({
+                        title: 'Error',
+                        description: 'Failed to save transactions to database. Please try again.',
+                        variant: 'destructive'
+                    });
+                }
 
                 // Update state
                 setParsedTransactions(transactions);
