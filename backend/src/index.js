@@ -13,7 +13,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'https://ai-mpesa-accountant-frontend.vercel.app',
-    'https://ai-mpesa-accountant.vercel.app',
+   
+    'https://ai-mpesa-accountant-backend.vercel.app',
     'http://localhost:3000'
   ],
   credentials: true,
