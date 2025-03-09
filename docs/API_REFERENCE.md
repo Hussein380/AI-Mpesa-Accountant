@@ -2,6 +2,33 @@
 
 This document provides a reference for all API endpoints used in the AI-Pesa application.
 
+## API Response Format
+
+All API responses follow a standardized format:
+
+### Success Response
+```json
+{
+  "success": true,
+  "message": "Operation successful message",
+  "data": {
+    // Response data specific to the endpoint
+  }
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Error message",
+    "code": "ERROR_CODE"
+  },
+  "statusCode": 400 // HTTP status code
+}
+```
+
 ## Authentication Endpoints
 
 ### Register User
@@ -12,19 +39,33 @@ This document provides a reference for all API endpoints used in the AI-Pesa app
   {
     "name": "User Name",
     "email": "user@example.com",
-    "password": "securePassword123"
+    "password": "securePassword123",
+    "phoneNumber": "254712345678" // Optional
   }
   ```
-- **Response**:
+- **Success Response** (201 Created):
   ```json
   {
+    "success": true,
     "message": "User registered successfully",
-    "token": "jwt_token_here",
-    "user": {
-      "id": "user_id",
+    "data": {
+      "_id": "user_id",
       "name": "User Name",
-      "email": "user@example.com"
+      "email": "user@example.com",
+      "phoneNumber": "254712345678",
+      "token": "jwt_token_here"
     }
+  }
+  ```
+- **Error Response** (400 Bad Request):
+  ```json
+  {
+    "success": false,
+    "error": {
+      "message": "User already exists with this email",
+      "code": "USER_EXISTS"
+    },
+    "statusCode": 400
   }
   ```
 
@@ -38,41 +79,219 @@ This document provides a reference for all API endpoints used in the AI-Pesa app
     "password": "securePassword123"
   }
   ```
-- **Response**:
+- **Success Response** (200 OK):
   ```json
   {
+    "success": true,
     "message": "Login successful",
-    "token": "jwt_token_here",
-    "user": {
-      "id": "user_id",
+    "data": {
+      "_id": "user_id",
       "name": "User Name",
-      "email": "user@example.com"
+      "email": "user@example.com",
+      "phoneNumber": "254712345678",
+      "token": "jwt_token_here"
     }
   }
   ```
+- **Error Response** (401 Unauthorized):
+  ```json
+  {
+    "success": false,
+    "error": {
+      "message": "Invalid credentials",
+      "code": "INVALID_CREDENTIALS"
+    },
+    "statusCode": 401
+  }
+  ```
 
-### Get Current User
-- **URL**: `/api/users/me`
+## User Endpoints
+
+### Get User Profile
+- **URL**: `/api/users/profile`
 - **Method**: `GET`
 - **Headers**: 
   ```
   Authorization: Bearer jwt_token_here
   ```
-- **Response**:
+- **Success Response** (200 OK):
   ```json
   {
-    "user": {
-      "id": "user_id",
+    "success": true,
+    "message": "User profile retrieved successfully",
+    "data": {
+      "_id": "user_id",
       "name": "User Name",
-      "email": "user@example.com"
+      "email": "user@example.com",
+      "phoneNumber": "254712345678"
+    }
+  }
+  ```
+- **Error Response** (401 Unauthorized):
+  ```json
+  {
+    "success": false,
+    "error": {
+      "message": "User not authenticated",
+      "code": "AUTH_ERROR"
+    },
+    "statusCode": 401
+  }
+  ```
+
+## Transaction Endpoints
+
+### Get Transactions
+- **URL**: `/api/transactions`
+- **Method**: `GET`
+- **Headers**: 
+  ```
+  Authorization: Bearer jwt_token_here
+  ```
+- **Query Parameters**:
+  ```
+  page: 1
+  limit: 10
+  startDate: 2023-03-01
+  endDate: 2023-03-31
+  ```
+- **Success Response** (200 OK):
+  ```json
+  {
+    "success": true,
+    "message": "Transactions retrieved successfully",
+    "data": {
+      "transactions": [
+        {
+          "_id": "transaction_id",
+          "transactionId": "MPesa123456",
+          "date": "2023-03-01T12:00:00Z",
+          "type": "SENT",
+          "amount": 1000,
+          "balance": 5000,
+          "recipient": "John Doe",
+          "sender": "",
+          "description": "Payment for services",
+          "category": "UTILITIES",
+          "source": "SMS",
+          "createdAt": "2023-03-01T12:05:00Z",
+          "mpesaReference": "ABC123"
+        }
+      ],
+      "pagination": {
+        "total": 25,
+        "page": 1,
+        "pages": 3
+      }
+    }
+  }
+  ```
+- **Error Response** (500 Internal Server Error):
+  ```json
+  {
+    "success": false,
+    "error": {
+      "message": "Failed to retrieve transactions",
+      "code": "TRANSACTION_FETCH_ERROR"
+    },
+    "statusCode": 500
+  }
+  ```
+
+### Create Transaction
+- **URL**: `/api/transactions`
+- **Method**: `POST`
+- **Headers**: 
+  ```
+  Authorization: Bearer jwt_token_here
+  ```
+- **Body**:
+  ```json
+  {
+    "transactionId": "MPesa123456",
+    "date": "2023-03-01T12:00:00Z",
+    "type": "SENT",
+    "amount": 1000,
+    "balance": 5000,
+    "recipient": "John Doe",
+    "description": "Payment for services",
+    "category": "UTILITIES",
+    "source": "MANUAL"
+  }
+  ```
+- **Success Response** (201 Created):
+  ```json
+  {
+    "success": true,
+    "message": "Transaction created successfully",
+    "data": {
+      "_id": "transaction_id",
+      "transactionId": "MPesa123456",
+      "date": "2023-03-01T12:00:00Z",
+      "type": "SENT",
+      "amount": 1000,
+      "balance": 5000,
+      "recipient": "John Doe",
+      "description": "Payment for services",
+      "category": "UTILITIES",
+      "source": "MANUAL",
+      "createdAt": "2023-03-01T12:05:00Z"
     }
   }
   ```
 
-## Chat Endpoints
+### Bulk Create Transactions
+- **URL**: `/api/transactions/bulk`
+- **Method**: `POST`
+- **Headers**: 
+  ```
+  Authorization: Bearer jwt_token_here
+  ```
+- **Body**:
+  ```json
+  {
+    "transactions": [
+      {
+        "transactionId": "MPesa123456",
+        "date": "2023-03-01T12:00:00Z",
+        "type": "SENT",
+        "amount": 1000,
+        "balance": 5000,
+        "recipient": "John Doe",
+        "description": "Payment for services",
+        "category": "UTILITIES",
+        "source": "SMS"
+      }
+    ]
+  }
+  ```
+- **Success Response** (201 Created):
+  ```json
+  {
+    "success": true,
+    "message": "Successfully created 1 transactions",
+    "data": [
+      {
+        "_id": "transaction_id",
+        "transactionId": "MPesa123456",
+        "date": "2023-03-01T12:00:00Z",
+        "type": "SENT",
+        "amount": 1000,
+        "balance": 5000,
+        "recipient": "John Doe",
+        "description": "Payment for services",
+        "category": "UTILITIES",
+        "source": "SMS",
+        "createdAt": "2023-03-01T12:05:00Z"
+      }
+    ]
+  }
+  ```
 
-### Send Message
-- **URL**: `/api/chat/message`
+## AI Chat Endpoints
+
+### Chat Completion
+- **URL**: `/api/ai/chat`
 - **Method**: `POST`
 - **Headers**: (Optional)
   ```
@@ -85,43 +304,31 @@ This document provides a reference for all API endpoints used in the AI-Pesa app
     "sessionId": "session_id" // Optional
   }
   ```
-- **Response**:
+- **Success Response** (200 OK):
   ```json
   {
-    "message": "AI response here",
-    "sessionId": "session_id",
-    "limitReached": false
+    "success": true,
+    "message": "AI response generated successfully",
+    "data": {
+      "response": "Based on your transactions, you spent Ksh 8,500 on food last month.",
+      "sessionId": "session_id"
+    }
+  }
+  ```
+- **Error Response** (403 Forbidden):
+  ```json
+  {
+    "success": false,
+    "error": {
+      "message": "Free message limit reached. Please sign up to continue.",
+      "code": "FREE_LIMIT_REACHED"
+    },
+    "statusCode": 403,
+    "limitReached": true
   }
   ```
 
-### Get Chat History
-- **URL**: `/api/chat/history`
-- **Method**: `GET`
-- **Headers**: 
-  ```
-  Authorization: Bearer jwt_token_here
-  ```
-- **Response**:
-  ```json
-  {
-    "messages": [
-      {
-        "id": "message_id",
-        "content": "User message",
-        "role": "user",
-        "timestamp": "2023-03-05T12:00:00Z"
-      },
-      {
-        "id": "message_id",
-        "content": "AI response",
-        "role": "assistant",
-        "timestamp": "2023-03-05T12:00:05Z"
-      }
-    ]
-  }
-  ```
-
-## Transaction Endpoints
+## Statement Endpoints
 
 ### Upload Statement
 - **URL**: `/api/statements/upload`
@@ -138,15 +345,21 @@ This document provides a reference for all API endpoints used in the AI-Pesa app
   startDate: "2023-03-01"
   endDate: "2023-03-31"
   ```
-- **Response**:
+- **Success Response** (201 Created):
   ```json
   {
+    "success": true,
     "message": "Statement uploaded successfully",
-    "statement": {
-      "id": "statement_id",
-      "name": "March 2023 Statement",
+    "data": {
+      "_id": "statement_id",
+      "filename": "statement-123456.pdf",
+      "originalFilename": "mpesa_statement_march.pdf",
+      "fileSize": 125000,
+      "mimeType": "application/pdf",
       "startDate": "2023-03-01T00:00:00Z",
-      "endDate": "2023-03-31T23:59:59Z"
+      "endDate": "2023-03-31T23:59:59Z",
+      "processed": false,
+      "createdAt": "2023-04-01T10:15:00Z"
     }
   }
   ```
@@ -182,42 +395,6 @@ This document provides a reference for all API endpoints used in the AI-Pesa app
       "income": 5000,
       "expenses": 3000,
       "count": 10
-    }
-  }
-  ```
-
-### Get Transactions
-- **URL**: `/api/transactions`
-- **Method**: `GET`
-- **Headers**: 
-  ```
-  Authorization: Bearer jwt_token_here
-  ```
-- **Query Parameters**:
-  ```
-  page: 1
-  limit: 10
-  startDate: 2023-03-01
-  endDate: 2023-03-31
-  ```
-- **Response**:
-  ```json
-  {
-    "transactions": [
-      {
-        "transactionId": "transaction_id",
-        "date": "2023-03-01T12:00:00Z",
-        "type": "SENT",
-        "amount": 1000,
-        "recipient": "John Doe",
-        "description": "Payment for services",
-        "category": "UTILITIES"
-      }
-    ],
-    "pagination": {
-      "total": 25,
-      "page": 1,
-      "pages": 3
     }
   }
   ```

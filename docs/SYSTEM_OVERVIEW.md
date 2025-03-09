@@ -122,6 +122,33 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 7. Backend returns AI response to frontend
 8. Frontend displays the response in chat interface
 
+## API Response Format
+
+All API responses follow a standardized format:
+
+### Success Response
+```json
+{
+  "success": true,
+  "message": "Operation successful message",
+  "data": {
+    // Response data specific to the endpoint
+  }
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Error message",
+    "code": "ERROR_CODE"
+  },
+  "statusCode": 400 // HTTP status code
+}
+```
+
 ## Deployment Strategy
 
 ### Frontend Deployment (Vercel)
@@ -158,19 +185,19 @@ This document provides a comprehensive overview of how the AI-Pesa system works,
 
 ## Future Roadmap
 
-### Phase 1: Core Functionality
+### Phase 1: Core Functionality (Completed)
 - Basic authentication
 - M-Pesa statement parsing
 - Transaction categorization
 - Simple chat interface
 
-### Phase 2: Enhanced Features
+### Phase 2: Enhanced Features (In Progress)
 - Improved AI analysis
 - Advanced financial reporting
 - Budget planning tools
 - Email notifications
 
-### Phase 3: Advanced Integration
+### Phase 3: Advanced Integration (Planned)
 - Direct M-Pesa API integration
 - Mobile app development
 - Multi-language support

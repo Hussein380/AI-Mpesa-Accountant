@@ -21,6 +21,14 @@ The User model stores information about registered users.
     type: String,
     required: true
   },
+  phoneNumber: {
+    type: String
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -31,6 +39,8 @@ The User model stores information about registered users.
 - `name`: The user's full name
 - `email`: The user's email address (unique)
 - `password`: Hashed password using bcrypt
+- `phoneNumber`: The user's phone number (optional)
+- `role`: User role for access control
 - `createdAt`: Timestamp when the user was created
 
 ## Transaction Model
@@ -42,15 +52,18 @@ The Transaction model stores information about financial transactions parsed fro
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   transactionId: {
     type: String,
-    required: true
+    required: true,
+    index: true
   },
   date: {
     type: Date,
-    required: true
+    required: true,
+    index: true
   },
   type: {
     type: String,
@@ -62,16 +75,20 @@ The Transaction model stores information about financial transactions parsed fro
     required: true
   },
   balance: {
-    type: Number
+    type: Number,
+    default: null
   },
   recipient: {
-    type: String
+    type: String,
+    default: ''
   },
   sender: {
-    type: String
+    type: String,
+    default: ''
   },
   description: {
-    type: String
+    type: String,
+    default: ''
   },
   category: {
     type: String,
@@ -80,8 +97,11 @@ The Transaction model stores information about financial transactions parsed fro
   },
   source: {
     type: String,
-    enum: ['PDF', 'SMS', 'MANUAL'],
-    required: true
+    enum: ['PDF', 'SMS', 'MANUAL', 'TEST'],
+    default: 'MANUAL'
+  },
+  mpesaReference: {
+    type: String
   },
   createdAt: {
     type: Date,
@@ -100,12 +120,78 @@ The Transaction model stores information about financial transactions parsed fro
 - `sender`: Name or phone number of the sender (for incoming transactions)
 - `description`: Description or purpose of the transaction
 - `category`: Category of the transaction for analysis purposes
-- `source`: Source of the transaction data (PDF statement, SMS, or manual entry)
+- `source`: Source of the transaction data (PDF statement, SMS, manual entry, or test)
+- `mpesaReference`: M-Pesa reference number for the transaction (if available)
 - `createdAt`: Timestamp when the transaction was added to the database
 
-## Message Model
+## Statement Model
 
-The Message model stores chat messages between users and the AI assistant.
+The Statement model stores information about uploaded M-Pesa statements.
+
+```javascript
+{
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  filename: {
+    type: String,
+    required: true
+  },
+  originalFilename: {
+    type: String,
+    required: true
+  },
+  fileSize: {
+    type: Number,
+    required: true
+  },
+  mimeType: {
+    type: String,
+    required: true
+  },
+  startDate: {
+    type: Date,
+    required: true
+  },
+  endDate: {
+    type: Date,
+    required: true
+  },
+  transactionCount: {
+    type: Number,
+    default: 0
+  },
+  processed: {
+    type: Boolean,
+    default: false
+  },
+  analysis: {
+    type: Object
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}
+```
+
+- `user`: Reference to the User who uploaded the statement
+- `filename`: Name of the file stored on the server
+- `originalFilename`: Original name of the uploaded file
+- `fileSize`: Size of the file in bytes
+- `mimeType`: MIME type of the file
+- `startDate`: Start date of the statement period
+- `endDate`: End date of the statement period
+- `transactionCount`: Number of transactions in the statement
+- `processed`: Whether the statement has been processed
+- `analysis`: Object containing AI analysis results
+- `createdAt`: Timestamp when the statement was uploaded
+
+## ChatMessage Model
+
+The ChatMessage model stores chat messages between users and the AI assistant.
 
 ```javascript
 {
@@ -117,16 +203,16 @@ The Message model stores chat messages between users and the AI assistant.
     type: String,
     required: true
   },
+  role: {
+    type: String,
+    enum: ['user', 'assistant', 'system'],
+    required: true
+  },
   content: {
     type: String,
     required: true
   },
-  role: {
-    type: String,
-    enum: ['user', 'assistant'],
-    required: true
-  },
-  timestamp: {
+  createdAt: {
     type: Date,
     default: Date.now
   }
@@ -135,9 +221,9 @@ The Message model stores chat messages between users and the AI assistant.
 
 - `user`: Reference to the User who sent/received the message (null for non-authenticated users)
 - `sessionId`: Unique identifier for the chat session
+- `role`: Whether the message is from the user, the AI assistant, or a system message
 - `content`: The text content of the message
-- `role`: Whether the message is from the user or the AI assistant
-- `timestamp`: When the message was sent
+- `createdAt`: When the message was sent
 
 ## MessageCount Model
 
@@ -172,4 +258,5 @@ The MessageCount model tracks the number of messages sent by non-authenticated u
 3. Timestamps are stored in UTC
 4. Foreign key relationships are maintained using MongoDB references
 5. Indexes should be created on frequently queried fields (email, sessionId, user, date)
-6. The Transaction model is designed to accommodate both M-Pesa statements and SMS messages 
+6. The Transaction model is designed to accommodate both M-Pesa statements and SMS messages
+7. All API responses follow a standardized format defined in `apiResponse.js` 

@@ -16,9 +16,46 @@ AI-Pesa allows users to:
 ```
 /
 ├── frontend/    # Next.js frontend application
-├── backend/     # Express.js backend with Ollama integration
-├── SYSTEM_OVERVIEW.md  # Comprehensive system architecture documentation
+├── backend/     # Express.js backend with Gemini AI integration
+├── docs/        # Project documentation
 ```
+
+## Key Features
+
+### 1. Standardized API Responses
+
+All API responses follow a consistent format:
+
+```json
+// Success response
+{
+  "success": true,
+  "message": "Operation successful message",
+  "data": { /* Response data */ }
+}
+
+// Error response
+{
+  "success": false,
+  "error": {
+    "message": "Error message",
+    "code": "ERROR_CODE"
+  },
+  "statusCode": 400
+}
+```
+
+See [API Reference](./docs/API_REFERENCE.md) for detailed endpoint documentation.
+
+### 2. Model Consistency
+
+To ensure data consistency between frontend and backend, we use a shared type system:
+
+- TypeScript interfaces in the frontend match MongoDB schemas in the backend
+- All models are defined in `frontend/src/types/models.ts`
+- Consistent field naming and types across the application
+
+See [Model Consistency Guide](./docs/MODEL_CONSISTENCY.md) for more details.
 
 ## Frontend
 
@@ -35,7 +72,7 @@ See the [frontend README](./frontend/README.md) for more details.
 
 The backend is an Express.js application that:
 - Processes M-Pesa transaction data
-- Integrates with Ollama for AI analysis
+- Integrates with Google's Gemini AI for analysis
 - Stores user data and transactions in MongoDB
 - Provides RESTful API endpoints for the frontend
 
@@ -43,7 +80,7 @@ See the [backend README](./backend/README.md) for more details.
 
 ## System Architecture
 
-For a comprehensive overview of how the frontend and backend components work together, see the [System Overview](./SYSTEM_OVERVIEW.md) document.
+For a comprehensive overview of how the frontend and backend components work together, see the [System Overview](./docs/SYSTEM_OVERVIEW.md) document.
 
 ## Development
 
@@ -73,18 +110,16 @@ npm install
 npm run dev
 ```
 
-### Ollama Setup
+### Gemini AI Setup
 
-To run the AI engine locally:
+To set up the AI engine:
 
-1. Install Ollama from [ollama.ai](https://ollama.ai)
-2. Pull the Llama 3 model:
-   ```bash
-   ollama pull llama3:8b
+1. Create a Google AI Studio account at [makersuite.google.com](https://makersuite.google.com)
+2. Generate an API key in the Google AI Studio
+3. Add the API key to your backend `.env` file:
    ```
-3. Run the model:
-   ```bash
-   ollama run llama3:8b
+   GEMINI_API_KEY=your_api_key_here
+   GEMINI_MODEL=gemini-pro
    ```
 
 ## Deployment
@@ -107,15 +142,21 @@ The backend can be deployed to services like Render, Railway, or Fly.io:
 
 1. Set up MongoDB Atlas for database
 2. Deploy the Express application
-3. Configure environment variables
-4. Set up Ollama integration
+3. Configure environment variables including the Gemini API key
+4. Set up proper security for API keys
+
+## Documentation
+
+- [API Reference](./docs/API_REFERENCE.md) - Detailed API endpoint documentation
+- [System Overview](./docs/SYSTEM_OVERVIEW.md) - Architecture and system design
+- [Database Schema](./docs/DATABASE_SCHEMA.md) - MongoDB schema documentation
+- [Model Consistency](./docs/MODEL_CONSISTENCY.md) - Frontend-backend data consistency
+- [Improvement Plan](./docs/IMPROVEMENT.md) - Planned improvements and enhancements
+
+## Contributing
+
+We welcome contributions to AI-Pesa! Please see our [Contributing Guide](./docs/CONTRIBUTING.md) for details on how to get started.
 
 ## License
 
 MIT 
-
-## Model Consistency
-
-To ensure data consistency between the frontend and backend, we've implemented a shared type system. All models are defined in TypeScript interfaces that match the MongoDB schemas.
-
-For more information, see [Model Consistency Guide](docs/MODEL_CONSISTENCY.md). 
