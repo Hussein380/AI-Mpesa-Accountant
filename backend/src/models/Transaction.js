@@ -70,7 +70,7 @@ TransactionSchema.index({ user: 1, transactionId: 1 }, { unique: true });
 
 // Create and export the model
 // Make sure to use 'Transaction' as the model name (first parameter)
-const TransactionModel = mongoose.model('Transaction', TransactionSchema);
+const Transaction = mongoose.model('Transaction', TransactionSchema);
 
 // Export the model directly
-module.exports = TransactionModel; 
+module.exports = Transaction; 
