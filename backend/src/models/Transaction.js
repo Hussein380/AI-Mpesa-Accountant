@@ -79,12 +79,18 @@ TransactionSchema.index({ mpesaReference: 1, user: 1 }, {
     partialFilterExpression: { mpesaReference: { $exists: true, $ne: null, $ne: '' } }
 });
 
-// Drop the problematic mpesaReference index if it exists
+// Ensure we're exporting a proper Mongoose model
 const Transaction = mongoose.model('Transaction', TransactionSchema);
 
-// Attempt to drop the index after model initialization
-// This will run when the application starts
-mongoose.connection.on('connected', async () => {
+// Handle index cleanup separately, but don't make the model export dependent on it
+if (mongoose.connection.readyState === 1) { // If already connected
+    cleanupIndexes();
+} else {
+    mongoose.connection.once('connected', cleanupIndexes);
+}
+
+// Separate function to clean up indexes
+async function cleanupIndexes() {
     try {
         await mongoose.connection.db.collection('transactions').dropIndex('mpesaReference_1');
         console.log('Dropped mpesaReference index successfully');
@@ -100,6 +106,6 @@ mongoose.connection.on('connected', async () => {
         // Index might not exist, which is fine
         console.log('Note: phoneNumber index might not exist or was already dropped');
     }
-});
+}
 
 module.exports = Transaction; 

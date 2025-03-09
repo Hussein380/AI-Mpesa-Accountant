@@ -1,4 +1,4 @@
-// File: C:\Users\user\OneDrive\Desktop\AI-Mpesa-Accountant-master\frontend\app\auth\layout.tsx
+// File: C:\Users\user\OneDrive\Documents\AI-Mpesa-Accountant-master\frontend\app\auth\layout.tsx
 import * as entry from '../../../../app/auth/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -5,51 +5,56 @@ const morgan = require('morgan');
 const path = require('path');
 const mongoose = require('mongoose');
 
-// Import routes
+// Initialize express app
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Connect to MongoDB with improved options
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+})
+.then(async () => {
+  console.log('MongoDB connected successfully');
+  
+  // Drop the problematic phoneNumber index if it exists
+  try {
+    // Get the User model collection
+    const User = mongoose.connection.collection('users');
+    
+    // Get all indexes
+    const indexes = await User.indexes();
+    
+    // Check if phoneNumber index exists
+    const phoneNumberIndex = indexes.find(index => 
+      index.key && index.key.phoneNumber !== undefined
+    );
+    
+    // If the index exists, drop it
+    if (phoneNumberIndex) {
+      await User.dropIndex('phoneNumber_1');
+      console.log('Dropped phoneNumber index successfully');
+    }
+  } catch (error) {
+    console.error('Error handling phoneNumber index:', error);
+  }
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  // Don't exit process in serverless environment
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
+});
+
+// Import routes - AFTER mongoose connection is established
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const aiRoutes = require('./routes/ai.routes');
 const statementRoutes = require('./routes/statement.routes');
 const transactionsRoutes = require('./routes/transactions.js');
-
-// Initialize express app
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('MongoDB connected successfully');
-    
-    // Drop the problematic phoneNumber index if it exists
-    try {
-      // Get the User model collection
-      const User = mongoose.connection.collection('users');
-      
-      // Get all indexes
-      const indexes = await User.indexes();
-      
-      // Check if phoneNumber index exists
-      const phoneNumberIndex = indexes.find(index => 
-        index.key && index.key.phoneNumber !== undefined
-      );
-      
-      // If the index exists, drop it
-      if (phoneNumberIndex) {
-        await User.dropIndex('phoneNumber_1');
-        console.log('Dropped phoneNumber index successfully');
-      }
-    } catch (error) {
-      console.error('Error handling phoneNumber index:', error);
-    }
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    // Don't exit process in serverless environment
-    if (process.env.NODE_ENV !== 'production') {
-      process.exit(1);
-    }
-  });
 
 // Middleware
 app.use(cors({
