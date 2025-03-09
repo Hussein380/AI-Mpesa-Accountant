@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = async (email: string, password: string) => {
         try {
             setLoading(true);
+            console.log(`Attempting to login with API URL: ${API_URL}`);
 
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
@@ -73,12 +74,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ email, password })
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Invalid email or password');
+            console.log(`Login response status: ${response.status}`);
+
+            // Get response text first for debugging
+            const responseText = await response.text();
+            console.log('Response text preview:', responseText.substring(0, 150));
+
+            // Check if the response is HTML (indicating an error page)
+            if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+                console.error('Received HTML response instead of JSON:', responseText.substring(0, 100));
+                throw new Error('The server returned an HTML page instead of JSON. This usually indicates a server error or incorrect API URL.');
             }
 
-            const data = await response.json();
+            // Try to parse as JSON
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+                throw new Error('Invalid response from server. Please try again later.');
+            }
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Invalid email or password');
+            }
 
             // Store token and user data
             setToken(data.token);
@@ -109,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signup = async (name: string, email: string, password: string, phoneNumber?: string) => {
         try {
             setLoading(true);
+            console.log(`Attempting to register with API URL: ${API_URL}`);
 
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
@@ -118,12 +138,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ name, email, password, phoneNumber })
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create account');
+            console.log(`Register response status: ${response.status}`);
+
+            // Get response text first for debugging
+            const responseText = await response.text();
+            console.log('Response text preview:', responseText.substring(0, 150));
+
+            // Check if the response is HTML (indicating an error page)
+            if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+                console.error('Received HTML response instead of JSON:', responseText.substring(0, 100));
+                throw new Error('The server returned an HTML page instead of JSON. This usually indicates a server error or incorrect API URL.');
             }
 
-            const data = await response.json();
+            // Try to parse as JSON
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+                throw new Error('Invalid response from server. Please try again later.');
+            }
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create account');
+            }
 
             // Store token and user data
             setToken(data.token);
