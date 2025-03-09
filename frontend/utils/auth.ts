@@ -102,27 +102,4 @@ export const parseToken = (token: string) => {
         console.error('Error parsing token:', error);
         return null;
     }
-};
-
-/**
- * Check if the API is available
- * @returns Promise that resolves to true if API is available, false otherwise
- */
-export const checkApiAvailability = async (): Promise<boolean> => {
-    try {
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/health`;
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            cache: 'no-store',
-            signal: AbortSignal.timeout(5000) // 5 second timeout
-        });
-
-        return response.ok;
-    } catch (error) {
-        console.error('API availability check failed:', error);
-        return false;
-    }
 }; 

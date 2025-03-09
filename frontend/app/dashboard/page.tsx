@@ -7,7 +7,7 @@ import { ArrowUp, ArrowDown, User, LogOut } from "lucide-react"
 import { MpesaTransaction, formatCurrency, formatDate } from "@/lib/mpesa-parser"
 import { useAuth } from "@/lib/context/AuthContext"
 import { useSearchParams } from "next/navigation"
-import { getToken, checkApiAvailability } from '../../utils/auth'
+import { getToken } from '../../utils/auth'
 
 export default function Dashboard() {
     const [transactions, setTransactions] = useState<MpesaTransaction[]>([])
@@ -32,15 +32,6 @@ export default function Dashboard() {
             setError(null) // Clear any previous errors
 
             try {
-                // First check if API is available
-                const apiAvailable = await checkApiAvailability();
-                if (!apiAvailable) {
-                    console.error('Dashboard: API is not available');
-                    setError('The server is currently unavailable. Please try again later.');
-                    setLoading(false);
-                    return;
-                }
-
                 // Get token from auth utility
                 const token = getToken()
                 if (!token) {
