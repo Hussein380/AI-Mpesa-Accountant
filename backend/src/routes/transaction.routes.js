@@ -6,7 +6,8 @@ const {
     getTransactionById,
     updateTransaction,
     deleteTransaction,
-    bulkCreateTransactions
+    bulkCreateTransactions,
+    getBalance
 } = require('../controllers/transaction.controller.js');
 
 const router = express.Router();
@@ -20,17 +21,20 @@ router.use((req, res, next) => {
 // All routes require authentication
 router.use(auth);
 
+// Get user balance - using the existing auth middleware
+router.get('/balance', getBalance);
+
 // Get all transactions with pagination and filters
 router.get('/', getTransactions);
+
+// Get a single transaction by ID
+router.get('/:id', getTransactionById);
 
 // Create a new transaction
 router.post('/', createTransaction);
 
-// Bulk create transactions (for importing statements)
+// Bulk create transactions
 router.post('/bulk', bulkCreateTransactions);
-
-// Get a specific transaction
-router.get('/:id', getTransactionById);
 
 // Update a transaction
 router.put('/:id', updateTransaction);

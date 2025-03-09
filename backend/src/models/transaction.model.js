@@ -46,7 +46,7 @@ const TransactionSchema = new Schema({
     },
     category: {
         type: String,
-        enum: ['FOOD', 'TRANSPORT', 'UTILITIES', 'ENTERTAINMENT', 'SHOPPING', 'HEALTH', 'EDUCATION', 'OTHER'],
+        enum: ['FOOD', 'TRANSPORT', 'UTILITIES', 'ENTERTAINMENT', 'SHOPPING', 'HEALTH', 'EDUCATION', 'TRANSFER', 'BILLS', 'OTHER'],
         default: 'OTHER'
     },
     source: {
@@ -54,19 +54,42 @@ const TransactionSchema = new Schema({
         enum: ['PDF', 'SMS', 'MANUAL', 'TEST'],
         default: 'MANUAL'
     },
+    mpesaReference: {
+        type: String,
+        index: true
+    },
+    confidence: {
+        type: Number,
+        min: 0,
+        max: 1,
+        default: 1
+    },
+    format: {
+        type: String,
+        enum: ['MPESA_STANDARD', 'MPESA_BUSINESS', 'MPESA_LEGACY', 'MPESA_RECEIVED', 'MPESA_SENT', 'MPESA_BUSINESS_PAYMENT', 'MPESA_WITHDRAWAL', 'MPESA_AIRTIME', 'MPESA_COMBINED', 'OTHER'],
+        default: 'OTHER'
+    },
+    parsingMethod: {
+        type: String,
+        default: 'standard'
+    },
+    statementRef: {
+        type: Schema.Types.ObjectId,
+        ref: 'Statement',
+        index: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
-    },
-    mpesaReference: {
-        type: String,
-        default: undefined
     }
+}, {
+    timestamps: true
 });
 
-// Add indexes
+// Add compound indexes for better query performance
 TransactionSchema.index({ user: 1, date: -1 });
-TransactionSchema.index({ user: 1, transactionId: 1 }, { unique: true });
+TransactionSchema.index({ user: 1, category: 1 });
+TransactionSchema.index({ user: 1, type: 1 });
 
 // Create and export the model
 // Make sure to use 'Transaction' as the model name (first parameter)

@@ -33,9 +33,22 @@ const statementSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    required: true,
+    index: true
+  },
+  filename: {
+    type: String,
     required: true
   },
-  name: {
+  originalFilename: {
+    type: String,
+    required: true
+  },
+  fileSize: {
+    type: Number,
+    required: true
+  },
+  mimeType: {
     type: String,
     required: true
   },
@@ -47,7 +60,21 @@ const statementSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  transactions: [transactionSchema],
+  format: {
+    type: String,
+    enum: ['MPESA_STANDARD', 'MPESA_BUSINESS', 'MPESA_LEGACY', 'MPESA_COMBINED', 'OTHER'],
+    default: 'OTHER'
+  },
+  confidence: {
+    type: Number,
+    min: 0,
+    max: 1,
+    default: 0.5
+  },
+  transactionCount: {
+    type: Number,
+    default: 0
+  },
   totalIncome: {
     type: Number,
     default: 0
@@ -56,17 +83,31 @@ const statementSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  finalBalance: {
+  netAmount: {
     type: Number,
     default: 0
   },
-  isAnalyzed: {
+  processed: {
     type: Boolean,
     default: false
   },
-  originalFile: {
-    type: String,
-    required: true
+  processingErrors: [{
+    message: String,
+    code: String,
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  reprocessCount: {
+    type: Number,
+    default: 0
+  },
+  lastProcessed: {
+    type: Date
+  },
+  analysis: {
+    type: Object
   },
   createdAt: {
     type: Date,
@@ -76,4 +117,9 @@ const statementSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Statement', statementSchema); 
+statementSchema.index({ user: 1, startDate: -1 });
+statementSchema.index({ user: 1, processed: 1 });
+
+const Statement = mongoose.model('Statement', statementSchema);
+
+module.exports = Statement; 

@@ -187,7 +187,7 @@ const deleteTransaction = async (req, res) => {
 const bulkCreateTransactions = async (req, res) => {
     try {
         console.log('bulkCreateTransactions: Request body:', JSON.stringify(req.body));
-
+        
         const userId = req.user?._id;
         if (!userId) {
             return sendError(res, 'User not authenticated', 'AUTH_ERROR', 401);
@@ -201,8 +201,8 @@ const bulkCreateTransactions = async (req, res) => {
         // Add user ID to each transaction and ensure balance is a number
         const transactionsWithUser = req.body.transactions.map(transaction => {
             const processedTransaction = {
-                ...transaction,
-                user: userId
+            ...transaction,
+            user: userId
             };
             
             // Convert balance to a number if it's a string
@@ -240,11 +240,57 @@ const bulkCreateTransactions = async (req, res) => {
     }
 };
 
+/**
+ * Get user's current balance
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with user's balance
+ */
+const getBalance = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        console.log('getBalance: Processing request for user:', userId);
+
+        // Find the most recent transaction with a balance
+        const latestTransaction = await Transaction.findOne(
+            { user: userId, balance: { $ne: null } }
+        ).sort({ date: -1 });
+
+        if (latestTransaction && latestTransaction.balance !== null) {
+            console.log('getBalance: Found latest transaction with balance:', latestTransaction._id);
+            return sendSuccess(res, { balance: latestTransaction.balance }, 'Balance retrieved successfully');
+        }
+
+        // If no transaction with balance found, calculate from transactions
+        console.log('getBalance: No transaction with balance found, calculating from transactions');
+        
+        // Get all transactions for the user
+        const transactions = await Transaction.find({ user: userId }).sort({ date: 1 });
+        
+        // Calculate balance
+        let balance = 0;
+        transactions.forEach(transaction => {
+            if (transaction.type === 'RECEIVED') {
+                balance += transaction.amount;
+            } else if (['SENT', 'PAYMENT', 'WITHDRAWAL'].includes(transaction.type)) {
+                balance -= transaction.amount;
+            }
+        });
+        
+        console.log('getBalance: Calculated balance:', balance);
+        return sendSuccess(res, { balance }, 'Balance calculated successfully');
+    } catch (error) {
+        console.error('getBalance: Error:', error);
+        return sendError(res, 'Failed to retrieve balance', 'BALANCE_FETCH_ERROR', 500);
+    }
+};
+
 module.exports = {
     getTransactions,
     createTransaction,
     getTransactionById,
     updateTransaction,
     deleteTransaction,
-    bulkCreateTransactions
+    bulkCreateTransactions,
+    getBalance
 }; 

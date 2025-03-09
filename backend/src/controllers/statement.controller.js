@@ -1,42 +1,40 @@
 const Statement = require('../models/statement.model');
-const path = require('path');
-const fs = require('fs');
+const statementService = require('../services/statement.service');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 /**
- * Upload M-Pesa statement
+ * Process M-Pesa SMS message
  */
-exports.uploadStatement = async (req, res) => {
+exports.processSms = async (req, res) => {
   try {
-    if (!req.file) {
-      return sendError(res, 'No file uploaded', 'NO_FILE', 400);
-    }
-
-    const { name, startDate, endDate } = req.body;
+    const { smsText } = req.body;
     
-    if (!name || !startDate || !endDate) {
-      return sendError(res, 'Please provide name, start date, and end date', 'MISSING_FIELDS', 400);
+    if (!smsText) {
+      return sendError(res, 'No SMS text provided', 'NO_SMS_TEXT', 400);
     }
 
-    // Create new statement
-    const statement = new Statement({
-      user: req.user.id,
-      filename: req.file.filename,
-      originalFilename: req.file.originalname,
-      fileSize: req.file.size,
-      mimeType: req.file.mimetype,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      processed: false
-    });
+    // Process the SMS message
+    const result = await statementService.processSmsMessage(smsText, req.user.id);
 
-    // Save statement to database
-    await statement.save();
+    if (!result.success) {
+      return sendError(res, result.error.message, result.error.code, 400);
+    }
 
-    return sendSuccess(res, statement, 'Statement uploaded successfully', 201);
+    // Check if this is a bulk transaction (combined statement)
+    if (result.isBulk) {
+      return sendSuccess(res, {
+        statement: result.statement,
+        transactions: result.transactions,
+        transactionCount: result.transactions.length
+      }, 'Combined statement processed successfully', 201);
+    }
+
+    return sendSuccess(res, {
+      transaction: result.transaction
+    }, 'SMS processed successfully', 201);
   } catch (error) {
-    console.error('Statement upload error:', error);
-    return sendError(res, 'Server error during statement upload', 'STATEMENT_UPLOAD_ERROR', 500);
+    console.error('SMS processing error:', error);
+    return sendError(res, 'Server error during SMS processing', 'SMS_PROCESSING_ERROR', 500);
   }
 };
 
@@ -76,25 +74,40 @@ exports.getStatementById = async (req, res) => {
 };
 
 /**
- * Delete a statement
+ * Delete a statement and its transactions
  */
 exports.deleteStatement = async (req, res) => {
   try {
-    const statement = await Statement.findOne({
-      _id: req.params.id,
-      user: req.user.id
-    });
+    const result = await statementService.deleteStatement(req.params.id, req.user.id);
     
-    if (!statement) {
-      return sendError(res, 'Statement not found', 'STATEMENT_NOT_FOUND', 404);
+    if (!result.success) {
+      return sendError(res, result.error.message, result.error.code, result.error.code === 'NOT_FOUND' ? 404 : 400);
     }
 
-    // Delete the statement
-    await Statement.deleteOne({ _id: req.params.id });
-
-    return sendSuccess(res, { id: req.params.id }, 'Statement deleted successfully');
+    return sendSuccess(res, {
+      id: req.params.id,
+      transactionsDeleted: result.transactionsDeleted
+    }, 'Statement and associated transactions deleted successfully');
   } catch (error) {
     console.error('Delete statement error:', error);
     return sendError(res, 'Server error while deleting statement', 'STATEMENT_DELETE_ERROR', 500);
+  }
+};
+
+/**
+ * Get statement statistics
+ */
+exports.getStatementStatistics = async (req, res) => {
+  try {
+    const result = await statementService.getStatementStatistics(req.user.id);
+    
+    if (!result.success) {
+      return sendError(res, result.error.message, result.error.code, 400);
+    }
+
+    return sendSuccess(res, result.statistics, 'Statement statistics retrieved successfully');
+  } catch (error) {
+    console.error('Get statement statistics error:', error);
+    return sendError(res, 'Server error while fetching statement statistics', 'STATISTICS_ERROR', 500);
   }
 }; 
