@@ -113,3 +113,9 @@ The backend can be deployed to services like Render, Railway, or Fly.io:
 ## License
 
 MIT 
+
+## Model Consistency
+
+To ensure data consistency between the frontend and backend, we've implemented a shared type system. All models are defined in TypeScript interfaces that match the MongoDB schemas.
+
+For more information, see [Model Consistency Guide](docs/MODEL_CONSISTENCY.md). 

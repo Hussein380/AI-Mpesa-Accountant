@@ -8,6 +8,8 @@ import { MpesaTransaction, formatCurrency, formatDate } from "@/lib/mpesa-parser
 import { useAuth } from "@/lib/context/AuthContext"
 import { useSearchParams } from "next/navigation"
 import { getToken } from '../../utils/auth'
+import { getEndpoint, createAuthenticatedRequest, processApiResponse } from '../../utils/api'
+import { Transaction, TransactionResponse } from '@/src/types/models'
 
 export default function Dashboard() {
     const [transactions, setTransactions] = useState<MpesaTransaction[]>([])
@@ -32,116 +34,49 @@ export default function Dashboard() {
             setError(null) // Clear any previous errors
 
             try {
-                // Get token from auth utility
-                const token = getToken()
-                if (!token) {
-                    console.log('Dashboard: No token found, skipping fetch')
-                    setLoading(false)
-                    setError('You need to log in to view transactions')
-                    return
-                }
-
-                console.log('Dashboard: Token found, proceeding with fetch')
-
-                // Fetch transactions from the API
-                const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/transactions?limit=100`
+                // Use our improved API utilities to create an authenticated request
+                const apiUrl = getEndpoint('transactions?limit=100')
                 console.log('Dashboard: Fetching from URL:', apiUrl)
 
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    cache: 'no-store', // Ensure we don't use cached data
-                    // Add timeout to prevent hanging requests
-                    signal: AbortSignal.timeout(15000) // 15 second timeout
-                })
+                // Create request with authentication in one atomic operation
+                const requestConfig = createAuthenticatedRequest('GET')
 
-                console.log('Dashboard: Response status:', response.status)
+                // Add timeout to prevent hanging requests
+                requestConfig.signal = AbortSignal.timeout(15000) // 15 second timeout
 
-                if (!response.ok) {
-                    let errorMessage = `Error connecting to API: ${response.status} ${response.statusText}`;
-                    try {
-                        const errorText = await response.text();
-                        console.error('Dashboard: API error response:', errorText);
+                const response = await fetch(apiUrl, requestConfig)
 
-                        // Try to parse as JSON to get more detailed error
-                        try {
-                            const errorJson = JSON.parse(errorText);
-                            if (errorJson.message) {
-                                errorMessage = errorJson.message;
-                            }
-                        } catch (parseError) {
-                            // If not JSON, use the text as is
-                            if (errorText && errorText.length < 100) {
-                                errorMessage = errorText;
-                            }
-                        }
-                    } catch (textError) {
-                        console.error('Dashboard: Failed to get error text:', textError);
-                    }
-
-                    throw new Error(errorMessage);
-                }
-
-                // Get response text first for debugging
-                const responseText = await response.text()
-                console.log('Dashboard: Response text preview:', responseText.substring(0, 150))
-
-                // Try to parse as JSON
-                let data
-                try {
-                    data = JSON.parse(responseText)
-                } catch (parseError) {
-                    console.error("Dashboard: Failed to parse response as JSON:", parseError)
-                    throw new Error("Server returned an invalid response")
-                }
-
-                // Check if transactions array exists
-                if (!data.transactions) {
-                    console.log('Dashboard: No transactions array in response')
-                    setTransactions([])
-                    setStats({ income: 0, expenses: 0, balance: 0, count: 0 })
-                    setLoading(false)
-                    return
-                }
+                // Process the response using our standardized handler with a custom transformation
+                // This handles the case where our frontend expects a different structure than what the backend returns
+                const data = await processApiResponse<TransactionResponse>(response, (responseData) => {
+                    // If the backend returns the data in a different structure than what the frontend expects,
+                    // we can transform it here
+                    return responseData;
+                });
 
                 console.log('Dashboard: Fetched transactions count:', data.transactions.length)
 
-                if (data.transactions.length === 0) {
-                    console.log('Dashboard: No transactions found in response')
-                    setTransactions([])
-                    setStats({ income: 0, expenses: 0, balance: 0, count: 0 })
-                } else {
-                    console.log('Dashboard: Processing transactions from response')
-                    setTransactions(data.transactions)
+                // Update state with the fetched data
+                setTransactions(data.transactions)
+                setPagination(data.pagination)
 
-                    // Ensure stats has all required fields with defaults
-                    const receivedStats = data.stats || { income: 0, expenses: 0 }
-                    const completeStats = {
-                        income: receivedStats.income || 0,
-                        expenses: receivedStats.expenses || 0,
-                        balance: receivedStats.balance || 0,
-                        count: data.transactions.length
-                    }
-                    setStats(completeStats)
+                // Calculate stats
+                const completeStats = {
+                    income: data.transactions.reduce((sum, t) => t.type === 'RECEIVED' ? sum + t.amount : sum, 0),
+                    expenses: data.transactions.reduce((sum, t) => ['SENT', 'PAYMENT', 'WITHDRAWAL'].includes(t.type) ? sum + t.amount : sum, 0),
+                    balance: data.transactions.length > 0 && data.transactions[0].balance ? data.transactions[0].balance : 0,
+                    count: data.transactions.length
                 }
-
-                // Update pagination
-                setPagination(data.pagination || { total: 0, page: 1, pages: 0 })
+                setStats(completeStats)
 
             } catch (error) {
                 console.error('Dashboard: Error fetching transactions:', error)
-                // Check if it's a network error
-                if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-                    setError('Unable to connect to the server. Please check your internet connection or try again later.')
-                } else {
-                    setError(`Error fetching transactions: ${error.message}`)
-                }
+                setError(error instanceof Error ? error.message : 'Failed to fetch transactions')
+                setTransactions([])
+                setStats({ income: 0, expenses: 0, balance: 0, count: 0 })
             } finally {
-                console.log('Dashboard: Fetch completed, loading set to false')
                 setLoading(false)
+                console.log('Dashboard: Fetch completed, loading set to false')
             }
         }
 

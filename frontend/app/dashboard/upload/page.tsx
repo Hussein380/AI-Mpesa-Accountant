@@ -7,6 +7,7 @@ import { Upload, FileText, Check, AlertCircle, MessageSquare, FileUp } from "luc
 import { parseMpesaSms, MpesaTransaction } from "@/lib/mpesa-parser"
 import { toast } from "@/components/ui/use-toast"
 import { getToken } from '../../../utils/auth'
+import { getEndpoint, createAuthenticatedRequest } from '../../../utils/api'
 
 export default function UploadPage() {
     const [isDragging, setIsDragging] = useState(false)
@@ -106,14 +107,6 @@ export default function UploadPage() {
                 try {
                     console.log('Upload: Starting to save transactions to database...');
 
-                    // Get the authentication token
-                    const token = getToken();
-                    if (!token) {
-                        console.log('Upload: No token found, cannot save transactions');
-                        throw new Error('Authentication token not found');
-                    }
-                    console.log('Upload: Token found, proceeding with save');
-
                     // Format transactions for the API
                     const transactionsForApi = transactions.map(transaction => ({
                         date: new Date(transaction.date),
@@ -132,20 +125,19 @@ export default function UploadPage() {
                     console.log('Upload: Sample API transaction:', JSON.stringify(transactionsForApi[0]));
 
                     // Send transactions to the backend
-                    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/transactions/bulk`;
+                    const apiUrl = getEndpoint('transactions/bulk');
                     console.log('Upload: Sending transactions to URL:', apiUrl);
                     console.log('Upload: Request body:', JSON.stringify({ transactions: transactionsForApi }));
 
                     let response;
                     try {
-                        response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ transactions: transactionsForApi })
-                        });
+                        // Create request with authentication in one atomic operation
+                        const requestConfig = createAuthenticatedRequest('POST', { transactions: transactionsForApi });
+
+                        // If we get here, we have a valid token (createAuthenticatedRequest would throw if not)
+                        console.log('Upload: Proceeding with save');
+
+                        response = await fetch(apiUrl, requestConfig);
 
                         console.log('Upload: Response status:', response.status);
                         console.log('Upload: Response status text:', response.statusText);
@@ -160,10 +152,7 @@ export default function UploadPage() {
                         console.error('Upload: Request that caused error:', {
                             url: apiUrl,
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': 'Bearer [REDACTED]'
-                            },
+                            headers: getAuthHeaders(token),
                             body: JSON.stringify({ transactions: transactionsForApi })
                         });
                         throw new Error(`Error saving transactions: ${response.statusText}`);

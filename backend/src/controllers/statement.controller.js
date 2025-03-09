@@ -1,6 +1,7 @@
 const Statement = require('../models/statement.model');
 const path = require('path');
 const fs = require('fs');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 /**
  * Upload M-Pesa statement
@@ -8,50 +9,34 @@ const fs = require('fs');
 exports.uploadStatement = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
+      return sendError(res, 'No file uploaded', 'NO_FILE', 400);
     }
 
     const { name, startDate, endDate } = req.body;
     
     if (!name || !startDate || !endDate) {
-      return res.status(400).json({ message: 'Please provide name, start date, and end date' });
+      return sendError(res, 'Please provide name, start date, and end date', 'MISSING_FIELDS', 400);
     }
 
     // Create new statement
     const statement = new Statement({
       user: req.user.id,
-      name,
+      filename: req.file.filename,
+      originalFilename: req.file.originalname,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      // Handle file path differently based on environment
-      originalFile: process.env.NODE_ENV === 'production' 
-        ? `memory-${Date.now()}-${req.file.originalname}` // Just a reference in production
-        : req.file.path, // Actual file path in development
-      transactions: [] // Will be populated after processing
+      processed: false
     });
 
+    // Save statement to database
     await statement.save();
 
-    // In a real implementation, you would:
-    // 1. Process the file to extract transactions (using req.file.buffer in production)
-    // 2. Update the statement with the extracted data
-    // 3. Calculate totals
-
-    // For production (Vercel), you would process the file directly from memory
-    // const fileBuffer = req.file.buffer; // Available in memory storage
-
-    res.status(201).json({
-      message: 'Statement uploaded successfully',
-      statement: {
-        id: statement._id,
-        name: statement.name,
-        startDate: statement.startDate,
-        endDate: statement.endDate
-      }
-    });
+    return sendSuccess(res, statement, 'Statement uploaded successfully', 201);
   } catch (error) {
     console.error('Statement upload error:', error);
-    res.status(500).json({ message: 'Server error during statement upload' });
+    return sendError(res, 'Server error during statement upload', 'STATEMENT_UPLOAD_ERROR', 500);
   }
 };
 
@@ -60,14 +45,12 @@ exports.uploadStatement = async (req, res) => {
  */
 exports.getStatements = async (req, res) => {
   try {
-    const statements = await Statement.find({ user: req.user.id })
-      .select('name startDate endDate totalIncome totalExpenses finalBalance isAnalyzed createdAt')
-      .sort({ createdAt: -1 });
-
-    res.json(statements);
+    const statements = await Statement.find({ user: req.user.id }).sort({ createdAt: -1 });
+    
+    return sendSuccess(res, statements, 'Statements retrieved successfully');
   } catch (error) {
     console.error('Get statements error:', error);
-    res.status(500).json({ message: 'Server error while fetching statements' });
+    return sendError(res, 'Server error while fetching statements', 'STATEMENTS_FETCH_ERROR', 500);
   }
 };
 
@@ -80,15 +63,15 @@ exports.getStatementById = async (req, res) => {
       _id: req.params.id,
       user: req.user.id
     });
-
+    
     if (!statement) {
-      return res.status(404).json({ message: 'Statement not found' });
+      return sendError(res, 'Statement not found', 'STATEMENT_NOT_FOUND', 404);
     }
 
-    res.json(statement);
+    return sendSuccess(res, statement, 'Statement retrieved successfully');
   } catch (error) {
     console.error('Get statement error:', error);
-    res.status(500).json({ message: 'Server error while fetching statement' });
+    return sendError(res, 'Server error while fetching statement', 'STATEMENT_FETCH_ERROR', 500);
   }
 };
 
@@ -101,23 +84,17 @@ exports.deleteStatement = async (req, res) => {
       _id: req.params.id,
       user: req.user.id
     });
-
+    
     if (!statement) {
-      return res.status(404).json({ message: 'Statement not found' });
+      return sendError(res, 'Statement not found', 'STATEMENT_NOT_FOUND', 404);
     }
 
-    // Delete the file if it exists and we're in development mode
-    if (process.env.NODE_ENV !== 'production' && 
-        statement.originalFile && 
-        fs.existsSync(statement.originalFile)) {
-      fs.unlinkSync(statement.originalFile);
-    }
-
+    // Delete the statement
     await Statement.deleteOne({ _id: req.params.id });
 
-    res.json({ message: 'Statement deleted successfully' });
+    return sendSuccess(res, { id: req.params.id }, 'Statement deleted successfully');
   } catch (error) {
     console.error('Delete statement error:', error);
-    res.status(500).json({ message: 'Server error while deleting statement' });
+    return sendError(res, 'Server error while deleting statement', 'STATEMENT_DELETE_ERROR', 500);
   }
 }; 

@@ -2,6 +2,7 @@
 const geminiService = require('../services/gemini.service');
 const User = require('../models/user.model');
 const ChatSession = require('../models/chat.model');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 // Define constants
 const FREE_MESSAGE_LIMIT = parseInt(process.env.MAX_FREE_MESSAGES) || 3;
@@ -23,57 +24,59 @@ exports.chatCompletion = async (req, res) => {
       const usedMessages = req.session?.messageCount || 0;
       
       if (usedMessages >= FREE_MESSAGE_LIMIT) {
-        return res.status(403).json({ 
-          message: 'Free message limit reached. Please sign up to continue.',
-          limitReached: true
+        return sendError(
+          res, 
+          'Free message limit reached. Please sign up to continue.', 
+          'FREE_LIMIT_REACHED', 
+          403,
+          { limitReached: true }
+        );
+      }
+      
+      // Increment the message count for this session
+      if (req.session) {
+        req.session.messageCount = (req.session.messageCount || 0) + 1;
+      }
+    }
+
+    // Get or create chat session
+    let chatSession;
+    if (userId) {
+      if (sessionId) {
+        chatSession = await ChatSession.findOne({ 
+          _id: sessionId,
+          user: userId
         });
       }
       
-      // Increment message count
-      if (!req.session) req.session = {};
-      req.session.messageCount = (req.session.messageCount || 0) + 1;
-    }
-
-    // Get conversation history if sessionId is provided
-    let history = [];
-    if (sessionId) {
-      const chatSession = await ChatSession.findById(sessionId);
-      if (chatSession && chatSession.messages) {
-        history = chatSession.messages.map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'assistant',
-          content: msg.content
-        }));
+      if (!chatSession) {
+        chatSession = new ChatSession({
+          user: userId,
+          messages: []
+        });
+        await chatSession.save();
       }
     }
 
-    // Generate AI response using Gemini
-    const aiResponse = await geminiService.generateChatResponse(message, history);
-    
-    // Save the chat message to the database if user is authenticated
-    if (userId && sessionId) {
-      await ChatSession.findByIdAndUpdate(
-        sessionId,
-        { 
-          $push: { 
-            messages: [
-              { content: message, sender: 'user' },
-              { content: aiResponse, sender: 'ai' }
-            ] 
-          },
-          lastUpdated: new Date()
-        },
-        { new: true, upsert: true }
+    // Process the message with Gemini
+    const aiResponse = await geminiService.generateChatResponse(message, userId);
+
+    // Save the message and response to the chat session if authenticated
+    if (userId && chatSession) {
+      chatSession.messages.push(
+        { role: 'user', content: message },
+        { role: 'assistant', content: aiResponse }
       );
+      await chatSession.save();
     }
 
-    res.json({
-      message: aiResponse,
-      sessionId: sessionId || 'free-session',
-      limitReached: !userId && (req.session?.messageCount >= FREE_MESSAGE_LIMIT)
-    });
+    return sendSuccess(res, {
+      response: aiResponse,
+      sessionId: chatSession?._id
+    }, 'AI response generated successfully');
   } catch (error) {
     console.error('Chat completion error:', error);
-    res.status(500).json({ message: 'Server error during AI chat' });
+    return sendError(res, 'Error generating AI response', 'AI_ERROR', 500);
   }
 };
 
@@ -93,45 +96,43 @@ exports.analyzeStatement = async (req, res) => {
     });
 
     if (!statement) {
-      return res.status(404).json({ message: 'Statement not found' });
+      return sendError(res, 'Statement not found', 'STATEMENT_NOT_FOUND', 404);
     }
 
     // Get transactions linked to this statement
-    const Transaction = require('../models/Transaction');
+    const Transaction = require('../models/transaction.model');
     const transactions = await Transaction.find({
       user: userId,
-      statement: statementId
-    });
+      date: {
+        $gte: statement.startDate,
+        $lte: statement.endDate
+      }
+    }).sort({ date: 1 });
 
     if (transactions.length === 0) {
-      // If no transactions are linked to the statement, return a message
-      return res.status(400).json({ message: 'No transactions found for this statement' });
+      return sendError(res, 'No transactions found for this statement', 'NO_TRANSACTIONS', 400);
     }
 
-    // Use Gemini to analyze transactions
-    const insights = await geminiService.analyzeTransactions(transactions);
+    // Generate analysis using Gemini
+    const analysis = await geminiService.analyzeTransactions(transactions);
 
-    // Update statement with analysis results
-    await Statement.findByIdAndUpdate(statementId, {
-      isAnalyzed: true,
-      totalIncome: insights.totalIncome,
-      totalExpenses: insights.totalExpenses,
-      finalBalance: insights.balance,
-      analysisResults: insights
-    });
+    // Update statement with analysis
+    statement.analysis = analysis;
+    statement.isAnalyzed = true;
+    await statement.save();
 
-    res.json({
-      message: 'Statement analyzed successfully',
-      insights
-    });
+    return sendSuccess(res, {
+      statementId,
+      analysis
+    }, 'Statement analyzed successfully');
   } catch (error) {
     console.error('Statement analysis error:', error);
-    res.status(500).json({ message: 'Server error during statement analysis' });
+    return sendError(res, 'Error analyzing statement', 'ANALYSIS_ERROR', 500);
   }
 };
 
 /**
- * Categorize transactions
+ * Categorize transactions using AI
  */
 exports.categorizeTransactions = async (req, res) => {
   try {
@@ -139,39 +140,37 @@ exports.categorizeTransactions = async (req, res) => {
     const userId = req.user.id;
 
     if (!transactionIds || !Array.isArray(transactionIds)) {
-      return res.status(400).json({ message: 'Transaction IDs are required' });
+      return sendError(res, 'Transaction IDs must be provided as an array', 'INVALID_INPUT', 400);
     }
 
-    const Transaction = require('../models/Transaction');
+    // Get transactions
+    const Transaction = require('../models/transaction.model');
     const transactions = await Transaction.find({
       _id: { $in: transactionIds },
       user: userId
     });
 
     if (transactions.length === 0) {
-      return res.status(404).json({ message: 'No transactions found' });
+      return sendError(res, 'No transactions found with the provided IDs', 'NO_TRANSACTIONS', 404);
     }
 
-    // Process each transaction
-    const results = [];
-    for (const transaction of transactions) {
-      const category = await geminiService.categorizeTransaction(transaction);
-      
-      // Update transaction with category
-      await Transaction.findByIdAndUpdate(transaction._id, { category });
-      
-      results.push({
-        transactionId: transaction._id,
-        category
-      });
-    }
+    // Generate categories using Gemini
+    const categorizedTransactions = await geminiService.categorizeTransactions(transactions);
 
-    res.json({
-      message: 'Transactions categorized successfully',
-      results
+    // Update transactions with categories
+    const updatePromises = categorizedTransactions.map(async (transaction) => {
+      await Transaction.findByIdAndUpdate(
+        transaction._id,
+        { category: transaction.category }
+      );
+      return transaction;
     });
+
+    const updatedTransactions = await Promise.all(updatePromises);
+
+    return sendSuccess(res, updatedTransactions, 'Transactions categorized successfully');
   } catch (error) {
     console.error('Transaction categorization error:', error);
-    res.status(500).json({ message: 'Server error during transaction categorization' });
+    return sendError(res, 'Error categorizing transactions', 'CATEGORIZATION_ERROR', 500);
   }
 }; 

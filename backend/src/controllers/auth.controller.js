@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 /**
  * Register a new user
@@ -12,14 +13,14 @@ exports.register = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists with this email' });
+      return sendError(res, 'User already exists with this email', 'USER_EXISTS', 400);
     }
 
     // Check if phone number is already in use (if provided)
     if (phoneNumber && phoneNumber.trim() !== '') {
       const existingPhoneUser = await User.findOne({ phoneNumber: phoneNumber.trim() });
       if (existingPhoneUser) {
-        return res.status(400).json({ message: 'Phone number already in use' });
+        return sendError(res, 'Phone number already in use', 'PHONE_EXISTS', 400);
       }
     }
 
@@ -27,43 +28,37 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user data
-    const userData = {
+    // Create new user
+    const user = new User({
       name,
       email,
-      password: hashedPassword
-    };
+      password: hashedPassword,
+      phoneNumber: phoneNumber ? phoneNumber.trim() : undefined
+    });
 
-    // Add phoneNumber if provided
-    if (phoneNumber && phoneNumber.trim() !== '') {
-      userData.phoneNumber = phoneNumber.trim();
-    }
-
-    // Create new user
-    const user = new User(userData);
-
+    // Save user to database
     await user.save();
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, email: user.email, name: user.name },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '30d' }
     );
 
-    res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phoneNumber: user.phoneNumber
-      }
-    });
+    // Return user data (without password) and token
+    const userData = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      token
+    };
+
+    return sendSuccess(res, userData, 'User registered successfully', 201);
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    console.error('Registration error:', error);
+    return sendError(res, 'Server error during registration', 'REGISTRATION_ERROR', 500);
   }
 };
 
@@ -72,54 +67,50 @@ exports.register = async (req, res) => {
  */
 exports.login = async (req, res) => {
   try {
-    console.log('Login request received:', { 
+    console.log('Login request received:', {
       body: req.body,
       headers: req.headers['content-type']
     });
-    
+
     const { email, password } = req.body;
 
+    // Validate input
     if (!email || !password) {
-      console.log('Missing email or password');
-      return res.status(400).json({ message: 'Email and password are required' });
+      return sendError(res, 'Please provide email and password', 'MISSING_FIELDS', 400);
     }
 
     // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
-      console.log('User not found:', email);
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return sendError(res, 'Invalid credentials', 'INVALID_CREDENTIALS', 401);
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log('Password mismatch for user:', email);
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return sendError(res, 'Invalid credentials', 'INVALID_CREDENTIALS', 401);
     }
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, email: user.email, name: user.name },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '30d' }
     );
 
-    console.log('Login successful for user:', email);
+    // Return user data (without password) and token
+    const userData = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      token
+    };
 
-    res.json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phoneNumber: user.phoneNumber
-      }
-    });
+    return sendSuccess(res, userData, 'Login successful');
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    return sendError(res, 'Server error during login', 'LOGIN_ERROR', 500);
   }
 };
 

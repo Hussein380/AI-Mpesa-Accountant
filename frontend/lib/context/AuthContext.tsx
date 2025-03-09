@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { getToken, setToken, removeToken, isAuthenticated } from '../../utils/auth';
+import { getEndpoint } from '../../utils/api'
 
 interface User {
     id: string;
@@ -18,8 +19,6 @@ interface AuthContextType {
     logout: () => void;
     loading: boolean;
 }
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -64,9 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = async (email: string, password: string) => {
         try {
             setLoading(true);
-            console.log(`Attempting to login with API URL: ${API_URL}`);
+            console.log(`Attempting to login with API URL: ${getEndpoint('auth/login')}`);
 
-            const response = await fetch(`${API_URL}/auth/login`, {
+            const response = await fetch(getEndpoint('auth/login'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -95,17 +94,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 throw new Error('Invalid response from server. Please try again later.');
             }
 
-            if (!response.ok) {
-                throw new Error(data.message || 'Invalid email or password');
-            }
+            // Check if the response has the new standardized format
+            if (data.success !== undefined) {
+                // New format
+                if (!data.success) {
+                    throw new Error(data.error?.message || 'Login failed');
+                }
 
-            // Store token and user data
-            setToken(data.token);
-            setUser({
-                id: data.user.id,
-                name: data.user.name,
-                email: data.user.email
-            });
+                // Extract user data from the new format
+                const userData = data.data;
+
+                // Store token and user data
+                setToken(userData.token);
+                setUser({
+                    id: userData._id, // Note: backend uses _id, frontend uses id
+                    name: userData.name,
+                    email: userData.email
+                });
+            } else {
+                // Old format (for backward compatibility)
+                setToken(data.token);
+                setUser({
+                    id: data.user.id,
+                    name: data.user.name,
+                    email: data.user.email
+                });
+            }
 
             // Debug router
             console.log('Login successful, redirecting to dashboard...');
@@ -128,9 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signup = async (name: string, email: string, password: string, phoneNumber?: string) => {
         try {
             setLoading(true);
-            console.log(`Attempting to register with API URL: ${API_URL}`);
+            console.log(`Attempting to register with API URL: ${getEndpoint('auth/register')}`);
 
-            const response = await fetch(`${API_URL}/auth/register`, {
+            const response = await fetch(getEndpoint('auth/register'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -159,17 +173,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 throw new Error('Invalid response from server. Please try again later.');
             }
 
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to create account');
-            }
+            // Check if the response has the new standardized format
+            if (data.success !== undefined) {
+                // New format
+                if (!data.success) {
+                    throw new Error(data.error?.message || 'Registration failed');
+                }
 
-            // Store token and user data
-            setToken(data.token);
-            setUser({
-                id: data.user.id,
-                name: data.user.name,
-                email: data.user.email
-            });
+                // Extract user data from the new format
+                const userData = data.data;
+
+                // Store token and user data
+                setToken(userData.token);
+                setUser({
+                    id: userData._id, // Note: backend uses _id, frontend uses id
+                    name: userData.name,
+                    email: userData.email
+                });
+            } else {
+                // Old format (for backward compatibility)
+                setToken(data.token);
+                setUser({
+                    id: data.user.id,
+                    name: data.user.name,
+                    email: data.user.email
+                });
+            }
 
             // Redirect to dashboard
             router.push('/dashboard');

@@ -10,7 +10,7 @@ const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const aiRoutes = require('./routes/ai.routes');
 const statementRoutes = require('./routes/statement.routes');
-const transactionsRoutes = require('./routes/transactions.js');
+const transactionsRoutes = require('./routes/transaction.routes');
 
 // Initialize express app
 const app = express();

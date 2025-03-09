@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/context/AuthContext"
 import { Button } from "@/components/ui/button"
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
+import { getEndpoint, createAuthenticatedRequest } from '../../../utils/api'
 
 const SAMPLE_QUESTIONS = [
     "How much did I spend on food last month?",
@@ -17,9 +18,6 @@ const SAMPLE_QUESTIONS = [
     "How much money did I send to my family last month?",
     "What are my top spending categories?",
 ]
-
-// API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Custom components for markdown rendering
 const markdownComponents: Components = {
@@ -78,31 +76,18 @@ export default function AIChatPage() {
         try {
             // Determine which endpoint to use based on authentication status
             const endpoint = isAuthenticated
-                ? `${API_BASE_URL}/ai/chat`
-                : `${API_BASE_URL}/ai/free-chat`;
+                ? getEndpoint('ai/chat')
+                : getEndpoint('ai/free-chat');
 
-            // Set up headers
-            const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-            };
-
-            // Add authorization header if authenticated
-            if (isAuthenticated) {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-            }
+            // Create request with authentication in one atomic operation
+            const requestConfig = createAuthenticatedRequest('POST', {
+                message: input,
+                previousMessages: messages.map(m => ({ role: m.role, content: m.content })),
+                sessionId: localStorage.getItem('chatSessionId') || undefined
+            });
 
             // Make API call to backend
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    message: input,
-                    sessionId: localStorage.getItem('chatSessionId') || undefined
-                }),
-            });
+            const response = await fetch(endpoint, requestConfig);
 
             if (!response.ok) {
                 throw new Error(`API error: ${response.status}`);

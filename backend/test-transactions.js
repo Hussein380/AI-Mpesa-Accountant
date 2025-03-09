@@ -1,7 +1,7 @@
 // Test script for transactions API
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Transaction = require('./src/models/Transaction');
+const Transaction = require('./src/models/transaction.model');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)

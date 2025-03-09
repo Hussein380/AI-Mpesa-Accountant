@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 /**
  * Get user profile
@@ -9,13 +10,13 @@ exports.getProfile = async (req, res) => {
     const user = await User.findById(req.user.id).select('-password');
     
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return sendError(res, 'User not found', 'USER_NOT_FOUND', 404);
     }
 
-    res.json(user);
+    return sendSuccess(res, user, 'User profile retrieved successfully');
   } catch (error) {
     console.error('Get profile error:', error);
-    res.status(500).json({ message: 'Server error while fetching profile' });
+    return sendError(res, 'Server error while fetching profile', 'PROFILE_FETCH_ERROR', 500);
   }
 };
 
@@ -33,23 +34,20 @@ exports.updateProfile = async (req, res) => {
     if (profilePicture) updateFields.profilePicture = profilePicture;
     
     // Update user
-    const user = await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { $set: updateFields },
       { new: true }
     ).select('-password');
     
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    if (!updatedUser) {
+      return sendError(res, 'User not found', 'USER_NOT_FOUND', 404);
     }
 
-    res.json({
-      message: 'Profile updated successfully',
-      user
-    });
+    return sendSuccess(res, updatedUser, 'Profile updated successfully');
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ message: 'Server error while updating profile' });
+    return sendError(res, 'Server error while updating profile', 'PROFILE_UPDATE_ERROR', 500);
   }
 };
 
@@ -58,21 +56,15 @@ exports.updateProfile = async (req, res) => {
  */
 exports.deleteProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const deletedUser = await User.findByIdAndDelete(req.user.id);
     
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    if (!deletedUser) {
+      return sendError(res, 'User not found', 'USER_NOT_FOUND', 404);
     }
 
-    // In a real implementation, you would:
-    // 1. Delete all user data (statements, chat sessions, etc.)
-    // 2. Delete the user account
-
-    await User.deleteOne({ _id: req.user.id });
-
-    res.json({ message: 'User account deleted successfully' });
+    return sendSuccess(res, { id: req.user.id }, 'User deleted successfully');
   } catch (error) {
     console.error('Delete profile error:', error);
-    res.status(500).json({ message: 'Server error while deleting profile' });
+    return sendError(res, 'Server error while deleting profile', 'PROFILE_DELETE_ERROR', 500);
   }
 }; 
