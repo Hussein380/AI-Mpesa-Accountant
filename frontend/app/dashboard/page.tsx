@@ -46,27 +46,48 @@ export default function Dashboard() {
 
                 const response = await fetch(apiUrl, requestConfig)
 
-                // Process the response using our standardized handler with a custom transformation
-                // This handles the case where our frontend expects a different structure than what the backend returns
+                // Process the response using our standardized handler
                 const data = await processApiResponse<TransactionResponse>(response, (responseData) => {
-                    // If the backend returns the data in a different structure than what the frontend expects,
-                    // we can transform it here
                     return responseData;
                 });
 
                 console.log('Dashboard: Fetched transactions count:', data.transactions.length)
 
+                // Debug: Log the first few transactions to check their structure
+                if (data.transactions.length > 0) {
+                    console.log('Dashboard: First transaction:', JSON.stringify(data.transactions[0]));
+                    console.log('Dashboard: First transaction balance:', data.transactions[0].balance);
+                    console.log('Dashboard: First transaction balance type:', typeof data.transactions[0].balance);
+                }
+
                 // Update state with the fetched data
                 setTransactions(data.transactions)
                 setPagination(data.pagination)
 
-                // Calculate stats
+                // Calculate income and expenses
+                const income = data.transactions.reduce(
+                    (sum, t) => t.type === 'RECEIVED' ? sum + t.amount : sum,
+                    0
+                );
+
+                const expenses = data.transactions.reduce(
+                    (sum, t) => ['SENT', 'PAYMENT', 'WITHDRAWAL'].includes(t.type) ? sum + t.amount : sum,
+                    0
+                );
+
+                // Calculate balance as income - expenses
+                // This is more reliable than using the balance field from transactions
+                const balance = income - expenses;
+                console.log('Dashboard: Calculated balance from income and expenses:', balance);
+
                 const completeStats = {
-                    income: data.transactions.reduce((sum, t) => t.type === 'RECEIVED' ? sum + t.amount : sum, 0),
-                    expenses: data.transactions.reduce((sum, t) => ['SENT', 'PAYMENT', 'WITHDRAWAL'].includes(t.type) ? sum + t.amount : sum, 0),
-                    balance: data.transactions.length > 0 && data.transactions[0].balance ? data.transactions[0].balance : 0,
+                    income,
+                    expenses,
+                    balance,
                     count: data.transactions.length
                 }
+
+                console.log('Dashboard: Stats calculated:', completeStats);
                 setStats(completeStats)
 
             } catch (error) {

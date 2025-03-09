@@ -84,15 +84,26 @@ const createTransaction = async (req, res) => {
             return sendError(res, 'User not authenticated', 'AUTH_ERROR', 401);
         }
 
+        // Ensure balance is a number if provided
+        const transactionData = { ...req.body, user: userId };
+        
+        // Convert balance to a number if it's a string
+        if (transactionData.balance !== undefined && transactionData.balance !== null) {
+            transactionData.balance = Number(transactionData.balance);
+            
+            // If conversion resulted in NaN, set to null
+            if (isNaN(transactionData.balance)) {
+                transactionData.balance = null;
+            }
+        }
+        
         // Create new transaction with user ID
-        const transaction = new Transaction({
-            ...req.body,
-            user: userId
-        });
+        const transaction = new Transaction(transactionData);
 
         // Save to database
         const savedTransaction = await transaction.save();
         console.log('createTransaction: Transaction saved:', savedTransaction._id);
+        console.log('createTransaction: Transaction balance:', savedTransaction.balance);
 
         return sendSuccess(res, savedTransaction, 'Transaction created successfully', 201);
     } catch (error) {
@@ -187,15 +198,35 @@ const bulkCreateTransactions = async (req, res) => {
             return sendError(res, 'No transactions provided or invalid format', 'INVALID_INPUT', 400);
         }
 
-        // Add user ID to each transaction
-        const transactionsWithUser = req.body.transactions.map(transaction => ({
-            ...transaction,
-            user: userId
-        }));
+        // Add user ID to each transaction and ensure balance is a number
+        const transactionsWithUser = req.body.transactions.map(transaction => {
+            const processedTransaction = {
+                ...transaction,
+                user: userId
+            };
+            
+            // Convert balance to a number if it's a string
+            if (processedTransaction.balance !== undefined && processedTransaction.balance !== null) {
+                processedTransaction.balance = Number(processedTransaction.balance);
+                
+                // If conversion resulted in NaN, set to null
+                if (isNaN(processedTransaction.balance)) {
+                    processedTransaction.balance = null;
+                }
+            }
+            
+            return processedTransaction;
+        });
 
         // Insert all transactions
         const insertedTransactions = await Transaction.insertMany(transactionsWithUser);
         console.log(`bulkCreateTransactions: Inserted ${insertedTransactions.length} transactions`);
+        
+        // Log the first transaction's balance for debugging
+        if (insertedTransactions.length > 0) {
+            console.log('bulkCreateTransactions: First transaction balance:', insertedTransactions[0].balance);
+            console.log('bulkCreateTransactions: First transaction balance type:', typeof insertedTransactions[0].balance);
+        }
 
         return sendSuccess(
             res, 

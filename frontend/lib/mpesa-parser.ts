@@ -41,7 +41,19 @@ export function parseMpesaSms(smsText: string): MpesaTransaction[] {
 
             // Extract balance
             const balanceMatch = message.match(/balance is Ksh([0-9,.]+)/);
-            const balance = balanceMatch ? parseFloat(balanceMatch[1].replace(/,/g, '')) : 0;
+            let balance = undefined; // Default to undefined instead of 0
+            if (balanceMatch) {
+                const balanceStr = balanceMatch[1].replace(/,/g, '');
+                balance = parseFloat(balanceStr);
+
+                // Log the extracted balance for debugging
+                console.log('Parsed balance:', balance, 'from string:', balanceStr);
+
+                // Ensure it's a valid number
+                if (isNaN(balance)) {
+                    balance = undefined;
+                }
+            }
 
             // Extract date
             const dateMatch = message.match(/on\s+(\d+\/\d+\/\d+)\s+at\s+(\d+:\d+\s+[APM]+)/);

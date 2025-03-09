@@ -107,19 +107,31 @@ export default function UploadPage() {
                 try {
                     console.log('Upload: Starting to save transactions to database...');
 
-                    // Format transactions for the API
-                    const transactionsForApi = transactions.map(transaction => ({
-                        date: new Date(transaction.date),
-                        type: transaction.type,
-                        amount: transaction.amount,
-                        balance: transaction.balance,
-                        recipient: transaction.recipient,
-                        sender: transaction.sender,
-                        description: transaction.description,
-                        category: 'OTHER', // Default category, will be updated by AI later
-                        source: 'SMS', // Or 'PDF' depending on the source
-                        transactionId: transaction.transactionId // Make sure to include the transactionId field
-                    }));
+                    // Format transactions for the API with proper balance handling
+                    const transactionsForApi = transactions.map(transaction => {
+                        // Create a base transaction object
+                        const formattedTransaction = {
+                            date: new Date(transaction.date),
+                            type: transaction.type,
+                            amount: transaction.amount,
+                            recipient: transaction.recipient || '',
+                            sender: transaction.sender || '',
+                            description: transaction.description || '',
+                            category: 'OTHER', // Default category, will be updated by AI later    
+                            source: 'SMS', // Or 'PDF' depending on the source
+                            transactionId: `${Date.now()}-${Math.random().toString(36).substring(2, 10)}` // Generate a unique ID
+                        };
+
+                        // Only include balance if it's a valid number
+                        if (transaction.balance !== undefined && transaction.balance !== null && !isNaN(transaction.balance)) {
+                            console.log('Upload: Including balance in transaction:', transaction.balance);
+                            formattedTransaction.balance = transaction.balance;
+                        } else {
+                            console.log('Upload: Transaction has no valid balance');
+                        }
+
+                        return formattedTransaction;
+                    });
 
                     console.log('Upload: Formatted transactions for API, count:', transactionsForApi.length);
                     console.log('Upload: Sample API transaction:', JSON.stringify(transactionsForApi[0]));
