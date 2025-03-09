@@ -64,23 +64,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = async (email: string, password: string) => {
         try {
             setLoading(true);
+            console.log(`Attempting to login with email: ${email} to API: ${API_URL}/auth/login`);
 
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password }),
+                // Add timeout to prevent hanging requests
+                signal: AbortSignal.timeout(15000) // 15 second timeout
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Invalid email or password');
+            console.log(`Login response status: ${response.status}`);
+
+            // Get the response text first
+            const responseText = await response.text();
+
+            // Check if the response is HTML (indicating an error page)
+            if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+                console.error('Received HTML response instead of JSON:', responseText.substring(0, 100));
+                throw new Error('The server returned an HTML page instead of JSON. This usually indicates a server error.');
             }
 
-            const data = await response.json();
+            // Try to parse the response as JSON
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+                console.error('Response text:', responseText.substring(0, 200));
+                throw new Error('Invalid response from server. Please try again later.');
+            }
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Invalid email or password');
+            }
 
             // Store token and user data
+            console.log('Login successful, storing token and user data');
             setToken(data.token);
             setUser({
                 id: data.user.id,
@@ -109,23 +132,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signup = async (name: string, email: string, password: string, phoneNumber?: string) => {
         try {
             setLoading(true);
+            console.log(`Attempting to register with email: ${email} to API: ${API_URL}/auth/register`);
 
             const response = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ name, email, password, phoneNumber })
+                body: JSON.stringify({ name, email, password, phoneNumber }),
+                // Add timeout to prevent hanging requests
+                signal: AbortSignal.timeout(15000) // 15 second timeout
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create account');
+            console.log(`Register response status: ${response.status}`);
+
+            // Get the response text first
+            const responseText = await response.text();
+
+            // Check if the response is HTML (indicating an error page)
+            if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+                console.error('Received HTML response instead of JSON:', responseText.substring(0, 100));
+                throw new Error('The server returned an HTML page instead of JSON. This usually indicates a server error.');
             }
 
-            const data = await response.json();
+            // Try to parse the response as JSON
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+                console.error('Response text:', responseText.substring(0, 200));
+                throw new Error('Invalid response from server. Please try again later.');
+            }
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create account');
+            }
 
             // Store token and user data
+            console.log('Registration successful, storing token and user data');
             setToken(data.token);
             setUser({
                 id: data.user.id,
@@ -134,11 +180,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
 
             // Redirect to dashboard
+            console.log('Registration successful, redirecting to dashboard...');
             router.push('/dashboard');
 
             return data;
         } catch (error) {
-            console.error('Signup error:', error);
+            console.error('Registration error:', error);
             throw error;
         } finally {
             setLoading(false);

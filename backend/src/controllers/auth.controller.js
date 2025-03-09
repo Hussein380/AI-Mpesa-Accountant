@@ -2,12 +2,32 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
+// Global error handler to ensure JSON responses
+const handleError = (res, error, message = 'Server error') => {
+  console.error(`Auth error: ${message}`, error);
+  return res.status(500).json({ 
+    message: message,
+    error: process.env.NODE_ENV === 'development' ? error.message : undefined
+  });
+};
+
 /**
  * Register a new user
  */
 exports.register = async (req, res) => {
   try {
+    console.log('Register request received:', { 
+      email: req.body.email,
+      name: req.body.name,
+      headers: req.headers['content-type']
+    });
+
     const { name, email, password, phoneNumber } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email and password are required' });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -46,10 +66,12 @@ exports.register = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, email: user.email, name: user.name },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '30d' }
     );
+
+    console.log('User registered successfully:', user.email);
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -62,8 +84,7 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    return handleError(res, error, 'Server error during registration');
   }
 };
 
@@ -73,7 +94,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     console.log('Login request received:', { 
-      body: req.body,
+      email: req.body.email,
       headers: req.headers['content-type']
     });
     
@@ -98,14 +119,14 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate JWT token
+    // Generate JWT token with more user info in the payload
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, email: user.email, name: user.name },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '30d' }
     );
 
-    console.log('Login successful for user:', email);
+    console.log('User logged in successfully:', user.email);
 
     res.json({
       message: 'Login successful',
@@ -118,8 +139,7 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    return handleError(res, error, 'Server error during login');
   }
 };
 
