@@ -1,22 +1,23 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
+// Define the schema
 const TransactionSchema = new Schema({
     user: {
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: true,
-        index: true // Add index for better query performance
+        index: true
     },
     transactionId: {
         type: String,
         required: true,
-        index: true // Not unique to allow for imports from different sources
+        index: true
     },
     date: {
         type: Date,
         required: true,
-        index: true // Add index for date-based queries
+        index: true
     },
     type: {
         type: String,
@@ -57,55 +58,19 @@ const TransactionSchema = new Schema({
         type: Date,
         default: Date.now
     },
-    // Update mpesaReference field to handle null values better
     mpesaReference: {
         type: String,
-        default: undefined,  // Use undefined instead of null
-        index: false,  // Remove direct index on this field
-        sparse: false  // Remove sparse option since we're not indexing directly
+        default: undefined
     }
 });
 
-// Add compound index for user + date for efficient user-specific date queries
+// Add indexes
 TransactionSchema.index({ user: 1, date: -1 });
-
-// Add compound index for user + transactionId for efficient lookups and to prevent duplicates per user
 TransactionSchema.index({ user: 1, transactionId: 1 }, { unique: true });
 
-// Create a compound index for mpesaReference + user if mpesaReference is needed for lookups
-TransactionSchema.index({ mpesaReference: 1, user: 1 }, { 
-    unique: true,
-    sparse: true,  // Only index documents where mpesaReference exists
-    partialFilterExpression: { mpesaReference: { $exists: true, $ne: null, $ne: '' } }
-});
+// Create and export the model
+// Make sure to use 'Transaction' as the model name (first parameter)
+const TransactionModel = mongoose.model('Transaction', TransactionSchema);
 
-// Ensure we're exporting a proper Mongoose model
-const Transaction = mongoose.model('Transaction', TransactionSchema);
-
-// Handle index cleanup separately, but don't make the model export dependent on it
-if (mongoose.connection.readyState === 1) { // If already connected
-    cleanupIndexes();
-} else {
-    mongoose.connection.once('connected', cleanupIndexes);
-}
-
-// Separate function to clean up indexes
-async function cleanupIndexes() {
-    try {
-        await mongoose.connection.db.collection('transactions').dropIndex('mpesaReference_1');
-        console.log('Dropped mpesaReference index successfully');
-    } catch (error) {
-        // Index might not exist, which is fine
-        console.log('Note: mpesaReference index might not exist or was already dropped');
-    }
-    
-    try {
-        await mongoose.connection.db.collection('transactions').dropIndex('phoneNumber_1');
-        console.log('Dropped phoneNumber index successfully');
-    } catch (error) {
-        // Index might not exist, which is fine
-        console.log('Note: phoneNumber index might not exist or was already dropped');
-    }
-}
-
-module.exports = Transaction; 
+// Export the model directly
+module.exports = TransactionModel; 

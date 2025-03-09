@@ -9,37 +9,67 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Middleware
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(morgan('dev'));
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok',
+    environment: process.env.NODE_ENV || 'development',
+    mongodbStatus: mongoose.connection.readyState
+  });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok',
+    environment: process.env.NODE_ENV || 'development',
+    mongodbStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Connect to MongoDB with improved options
+console.log('Connecting to MongoDB...');
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+  serverSelectionTimeoutMS: 10000, // Timeout after 10s
   socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
 })
-.then(async () => {
+.then(() => {
   console.log('MongoDB connected successfully');
   
-  // Drop the problematic phoneNumber index if it exists
-  try {
-    // Get the User model collection
-    const User = mongoose.connection.collection('users');
-    
-    // Get all indexes
-    const indexes = await User.indexes();
-    
-    // Check if phoneNumber index exists
-    const phoneNumberIndex = indexes.find(index => 
-      index.key && index.key.phoneNumber !== undefined
-    );
-    
-    // If the index exists, drop it
-    if (phoneNumberIndex) {
-      await User.dropIndex('phoneNumber_1');
-      console.log('Dropped phoneNumber index successfully');
-    }
-  } catch (error) {
-    console.error('Error handling phoneNumber index:', error);
-  }
+  // Import routes AFTER MongoDB connection is established
+  const authRoutes = require('./routes/auth.routes');
+  const userRoutes = require('./routes/user.routes');
+  const aiRoutes = require('./routes/ai.routes');
+  const statementRoutes = require('./routes/statement.routes');
+  const transactionsRoutes = require('./routes/transactions.js');
+  
+  // API routes
+  app.use('/api/auth', authRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/ai', aiRoutes);
+  app.use('/api/statements', statementRoutes);
+  app.use('/api/transactions', transactionsRoutes);
+  
+  // Start the server
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 })
 .catch(err => {
   console.error('MongoDB connection error:', err);
@@ -49,53 +79,22 @@ mongoose.connect(process.env.MONGODB_URI, {
   }
 });
 
-// Import routes - AFTER mongoose connection is established
-const authRoutes = require('./routes/auth.routes');
-const userRoutes = require('./routes/user.routes');
-const aiRoutes = require('./routes/ai.routes');
-const statementRoutes = require('./routes/statement.routes');
-const transactionsRoutes = require('./routes/transactions.js');
-
-// Middleware
-app.use(cors({
-  origin: [
-    'https://ai-mpesa-accountant-frontend.vercel.app',
-    'https://ai-mpesa-accountant-backend.vercel.app',
-    'http://localhost:3000'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-}));
-app.use(express.json({ limit: '10mb' }));
-if (process.env.NODE_ENV !== 'production') {
-  app.use(morgan('dev'));
-}
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Log all requests
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
-  next();
+// Handle MongoDB connection errors
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
 });
 
-// Create uploads directory if it doesn't exist
-// Note: In Vercel, file uploads should be handled differently
-// This is kept for local development
-if (process.env.NODE_ENV !== 'production') {
-  const fs = require('fs');
-  const uploadDir = path.join(__dirname, '../uploads');
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
-}
+// Handle MongoDB disconnection
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/statements', statementRoutes);
-app.use('/api/transactions', transactionsRoutes);
+// Handle process termination
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  console.log('MongoDB connection closed due to app termination');
+  process.exit(0);
+});
 
 // Test route
 app.get('/api/test', (req, res) => {
@@ -103,16 +102,6 @@ app.get('/api/test', (req, res) => {
     message: 'API test successful',
     timestamp: new Date().toISOString(),
     headers: req.headers
-  });
-});
-
-// Health check route
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    message: 'AI-Pesa API is running',
-    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -132,13 +121,6 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err : {}
   });
 });
-
-// Start server in development, export app in production
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
 
 // Export app for serverless deployment
 module.exports = app; 

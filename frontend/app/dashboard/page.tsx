@@ -7,7 +7,7 @@ import { ArrowUp, ArrowDown, User, LogOut } from "lucide-react"
 import { MpesaTransaction, formatCurrency, formatDate } from "@/lib/mpesa-parser"
 import { useAuth } from "@/lib/context/AuthContext"
 import { useSearchParams } from "next/navigation"
-import { getToken } from '../../utils/auth'
+import { getToken, checkApiAvailability } from '../../utils/auth'
 
 export default function Dashboard() {
     const [transactions, setTransactions] = useState<MpesaTransaction[]>([])
@@ -32,11 +32,21 @@ export default function Dashboard() {
             setError(null) // Clear any previous errors
 
             try {
+                // First check if API is available
+                const apiAvailable = await checkApiAvailability();
+                if (!apiAvailable) {
+                    console.error('Dashboard: API is not available');
+                    setError('The server is currently unavailable. Please try again later.');
+                    setLoading(false);
+                    return;
+                }
+
                 // Get token from auth utility
                 const token = getToken()
                 if (!token) {
                     console.log('Dashboard: No token found, skipping fetch')
                     setLoading(false)
+                    setError('You need to log in to view transactions')
                     return
                 }
 
@@ -60,9 +70,28 @@ export default function Dashboard() {
                 console.log('Dashboard: Response status:', response.status)
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Dashboard: API error response:', errorText);
-                    throw new Error(`Error connecting to API: ${response.status} ${response.statusText}`);
+                    let errorMessage = `Error connecting to API: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorText = await response.text();
+                        console.error('Dashboard: API error response:', errorText);
+
+                        // Try to parse as JSON to get more detailed error
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            if (errorJson.message) {
+                                errorMessage = errorJson.message;
+                            }
+                        } catch (parseError) {
+                            // If not JSON, use the text as is
+                            if (errorText && errorText.length < 100) {
+                                errorMessage = errorText;
+                            }
+                        }
+                    } catch (textError) {
+                        console.error('Dashboard: Failed to get error text:', textError);
+                    }
+
+                    throw new Error(errorMessage);
                 }
 
                 // Get response text first for debugging
@@ -140,6 +169,16 @@ export default function Dashboard() {
             clearInterval(interval)
         }
     }, [refreshParam])
+
+    // Add a retry function
+    const handleRetry = () => {
+        // Force a refresh by updating the URL with a timestamp
+        const url = new URL(window.location.href);
+        url.searchParams.set('refresh', Date.now().toString());
+        window.history.replaceState({}, '', url.toString());
+
+        // The useEffect will be triggered by the refreshParam change
+    }
 
     return (
         <div className="p-6 max-w-7xl mx-auto">
@@ -245,20 +284,15 @@ export default function Dashboard() {
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
             ) : error ? (
-                <motion.div
-                    className="bg-red-900/30 text-red-200 rounded-lg p-4 mb-6"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
+                <div className="mt-4 p-4 bg-red-900/30 text-red-400 rounded-lg">
                     <p>{error}</p>
                     <button
-                        onClick={() => window.location.reload()}
-                        className="mt-2 px-3 py-1 bg-red-800 hover:bg-red-700 rounded-md text-sm"
+                        onClick={handleRetry}
+                        className="mt-2 px-4 py-2 bg-red-800 text-white rounded hover:bg-red-700 transition-colors"
                     >
                         Retry
                     </button>
-                </motion.div>
+                </div>
             ) : transactions.length > 0 ? (
                 <motion.div
                     className="bg-gray-800 rounded-lg p-3 sm:p-4 md:p-6 shadow-md mb-6 sm:mb-8"

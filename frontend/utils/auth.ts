@@ -6,7 +6,30 @@ export const getToken = (): string | null => {
     if (typeof window === 'undefined') {
         return null; // Not in browser environment
     }
-    return localStorage.getItem('token');
+
+    const token = localStorage.getItem('token');
+
+    // If token exists, validate it
+    if (token) {
+        try {
+            // Check if token is expired
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expiry = payload.exp * 1000; // Convert to milliseconds
+
+            if (Date.now() >= expiry) {
+                // Token is expired, remove it
+                console.log('Token expired, removing from localStorage');
+                localStorage.removeItem('token');
+                return null;
+            }
+        } catch (error) {
+            console.error('Error validating token:', error);
+            localStorage.removeItem('token');
+            return null;
+        }
+    }
+
+    return token;
 };
 
 /**
@@ -14,27 +37,7 @@ export const getToken = (): string | null => {
  * @returns True if the user is authenticated, false otherwise
  */
 export const isAuthenticated = (): boolean => {
-    const token = getToken();
-    if (!token) {
-        return false;
-    }
-
-    try {
-        // Check if token is expired
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const expiry = payload.exp * 1000; // Convert to milliseconds
-
-        if (Date.now() >= expiry) {
-            // Token is expired, remove it
-            localStorage.removeItem('token');
-            return false;
-        }
-
-        return true;
-    } catch (error) {
-        console.error('Error checking token validity:', error);
-        return false;
-    }
+    return getToken() !== null;
 };
 
 /**
@@ -45,7 +48,27 @@ export const setToken = (token: string): void => {
     if (typeof window === 'undefined') {
         return; // Not in browser environment
     }
-    localStorage.setItem('token', token);
+
+    // Validate token before storing
+    try {
+        // Check token format
+        if (!token || !token.includes('.') || token.split('.').length !== 3) {
+            console.error('Invalid token format');
+            return;
+        }
+
+        // Parse and validate payload
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (!payload.exp) {
+            console.error('Token missing expiration');
+            return;
+        }
+
+        localStorage.setItem('token', token);
+        console.log('Token stored successfully');
+    } catch (error) {
+        console.error('Error storing token:', error);
+    }
 };
 
 /**
@@ -56,6 +79,7 @@ export const removeToken = (): void => {
         return; // Not in browser environment
     }
     localStorage.removeItem('token');
+    console.log('Token removed from localStorage');
 };
 
 /**
@@ -77,5 +101,28 @@ export const parseToken = (token: string) => {
     } catch (error) {
         console.error('Error parsing token:', error);
         return null;
+    }
+};
+
+/**
+ * Check if the API is available
+ * @returns Promise that resolves to true if API is available, false otherwise
+ */
+export const checkApiAvailability = async (): Promise<boolean> => {
+    try {
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/health`;
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+
+        return response.ok;
+    } catch (error) {
+        console.error('API availability check failed:', error);
+        return false;
     }
 }; 

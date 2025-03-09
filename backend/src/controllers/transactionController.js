@@ -1,4 +1,10 @@
 const Transaction = require('../models/Transaction.js');
+const mongoose = require('mongoose');
+
+// Debug log to verify the model is loaded correctly
+console.log('Transaction model loaded:', typeof Transaction);
+console.log('Transaction model methods:', Object.keys(Transaction));
+console.log('Mongoose connection state:', mongoose.connection.readyState);
 
 const getTransactions = async (req, res) => {
     try {
@@ -15,18 +21,29 @@ const getTransactions = async (req, res) => {
         const skip = (page - 1) * limit;
         console.log('getTransactions: Pagination:', { page, limit });
 
+        // Verify Transaction model is available
+        if (!Transaction || typeof Transaction.find !== 'function') {
+            console.error('getTransactions: Transaction model is not properly initialized');
+            console.error('getTransactions: Transaction type:', typeof Transaction);
+            return res.status(500).json({ 
+                message: 'Internal server error: Database model not initialized properly' 
+            });
+        }
+
         // Get total count for pagination - using a more compatible approach
         let totalCount = 0;
         try {
             // Try the most modern approach first
-            totalCount = await Transaction.find({ user: userId }).countDocuments();
+            totalCount = await Transaction.countDocuments({ user: userId });
         } catch (countError) {
+            console.error('getTransactions: Error using countDocuments:', countError);
             try {
                 // Fall back to count() if countDocuments() is not available
-                totalCount = await Transaction.find({ user: userId }).count();
+                totalCount = await Transaction.count({ user: userId });
             } catch (fallbackError) {
+                console.error('getTransactions: Error using count:', fallbackError);
                 // Last resort: get all documents and count them in memory
-                const allDocs = await Transaction.find({ user: userId });
+                const allDocs = await Transaction.find({ user: userId }).lean();
                 totalCount = allDocs.length;
             }
         }
