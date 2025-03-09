@@ -5,6 +5,13 @@ const morgan = require('morgan');
 const path = require('path');
 const mongoose = require('mongoose');
 
+// Import routes
+const authRoutes = require('./routes/auth.routes');
+const userRoutes = require('./routes/user.routes');
+const aiRoutes = require('./routes/ai.routes');
+const statementRoutes = require('./routes/statement.routes');
+const transactionsRoutes = require('./routes/transactions.js');
+
 // Initialize express app
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,7 +20,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'https://ai-mpesa-accountant-frontend.vercel.app',
-   
+    'https://ai-mpesa-accountant.vercel.app',
     'https://ai-mpesa-accountant-backend.vercel.app',
     'http://localhost:3000'
   ],
@@ -29,6 +36,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// API routes - register these regardless of MongoDB connection
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/statements', statementRoutes);
+app.use('/api/transactions', transactionsRoutes);
+
+// Root route for health check
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Welcome to AI-Pesa API',
+    documentation: 'See API_REFERENCE.md for details'
+  });
+});
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -56,20 +78,6 @@ mongoose.connect(process.env.MONGODB_URI)
     } catch (error) {
       console.error('Error handling phoneNumber index:', error);
     }
-
-    // Import routes AFTER MongoDB connection is established
-    const authRoutes = require('./routes/auth.routes');
-    const userRoutes = require('./routes/user.routes');
-    const aiRoutes = require('./routes/ai.routes');
-    const statementRoutes = require('./routes/statement.routes');
-    const transactionsRoutes = require('./routes/transactions.js');
-    
-    // API routes
-    app.use('/api/auth', authRoutes);
-    app.use('/api/users', userRoutes);
-    app.use('/api/ai', aiRoutes);
-    app.use('/api/statements', statementRoutes);
-    app.use('/api/transactions', transactionsRoutes);
     
     // Start the server
     app.listen(PORT, () => {
@@ -81,6 +89,11 @@ mongoose.connect(process.env.MONGODB_URI)
     // Don't exit process in serverless environment
     if (process.env.NODE_ENV !== 'production') {
       process.exit(1);
+    } else {
+      // In production, start the server anyway so routes work
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT} (without MongoDB connection)`);
+      });
     }
   });
 
@@ -107,14 +120,6 @@ app.get('/api/test', (req, res) => {
     message: 'API test successful',
     timestamp: new Date().toISOString(),
     headers: req.headers
-  });
-});
-
-// Root route
-app.get('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'Welcome to AI-Pesa API',
-    documentation: 'See API_REFERENCE.md for details'
   });
 });
 
