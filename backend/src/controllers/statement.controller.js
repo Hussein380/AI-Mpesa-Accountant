@@ -1,5 +1,6 @@
 const Statement = require('../models/statement.model');
 const statementService = require('../services/statement.service');
+const pdfParserService = require('../services/pdfParser.service');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 /**
@@ -109,5 +110,109 @@ exports.getStatementStatistics = async (req, res) => {
   } catch (error) {
     console.error('Get statement statistics error:', error);
     return sendError(res, 'Server error while fetching statement statistics', 'STATISTICS_ERROR', 500);
+  }
+};
+
+/**
+ * Process M-Pesa PDF statement
+ */
+exports.processPdf = async (req, res) => {
+  try {
+    const { pdfData, statementId, statementDate, statementPeriod } = req.body;
+    const userId = req.user.id;
+    
+    console.log('processPdf: Starting PDF processing for user:', userId);
+    console.log('processPdf: PDF data type:', typeof pdfData);
+    console.log('processPdf: PDF data summary length:', pdfData.summaryData ? pdfData.summaryData.length : 'N/A');
+    
+    if (!pdfData) {
+      return sendError(res, 'No PDF data provided', 'NO_PDF_DATA', 400);
+    }
+
+    // Ensure all data has source set to PDF
+    if (pdfData.summaryData) {
+      pdfData.summaryData.forEach(item => {
+        item.source = 'PDF';
+      });
+      console.log('processPdf: Added source=PDF to all summary data items');
+    }
+
+    // Ensure statement has source set to PDF
+    if (pdfData.statement) {
+      pdfData.statement.source = 'PDF';
+    }
+
+    // Ensure customer info has source set to PDF
+    if (pdfData.customerInfo) {
+      pdfData.customerInfo.source = 'PDF';
+    }
+    
+    // Process the PDF statement
+    const statementInfo = {
+      statementId,
+      statementDate,
+      statementPeriod
+    };
+    
+    console.log('processPdf: Calling pdfParserService with statement info:', statementInfo);
+    
+    const result = await pdfParserService.processPdfStatement(pdfData, userId, statementInfo);
+    
+    console.log('processPdf: PDF processing result:', {
+      transactionCount: result.transactions.length,
+      income: result.stats.income,
+      expenses: result.stats.expenses,
+      totalAmount: result.stats.income - result.stats.expenses
+    });
+    
+    // Log the first few transactions for debugging
+    if (result.transactions.length > 0) {
+      console.log('processPdf: First transaction example:', {
+        id: result.transactions[0]._id,
+        type: result.transactions[0].type,
+        amount: result.transactions[0].amount,
+        source: result.transactions[0].source,
+        description: result.transactions[0].description
+      });
+      
+      // Count transactions by type
+      const types = [...new Set(result.transactions.map(t => t.type))];
+      const typeCount = types.reduce((acc, type) => {
+        acc[type] = result.transactions.filter(t => t.type === type).length;
+        return acc;
+      }, {});
+      console.log('processPdf: Transactions by type:', typeCount);
+    }
+
+    // Update statement if statementId is provided
+    if (statementId) {
+      console.log('processPdf: Updating statement with ID:', statementId);
+      await Statement.findByIdAndUpdate(statementId, {
+        processed: true,
+        transactionCount: result.stats.count,
+        totalIncome: result.stats.income,
+        totalExpenses: result.stats.expenses,
+        netAmount: result.stats.income - result.stats.expenses,
+        source: 'PDF' // Explicitly set source as PDF
+      });
+      console.log('processPdf: Statement updated successfully');
+    }
+
+    return sendSuccess(res, {
+      transactions: result.transactions,
+      stats: result.stats,
+      statement: {
+        _id: statementId || `pdf-${Date.now()}`,
+        source: 'PDF',
+        processed: true,
+        transactionCount: result.stats.count,
+        totalIncome: result.stats.income,
+        totalExpenses: result.stats.expenses,
+        netAmount: result.stats.income - result.stats.expenses
+      }
+    }, 'PDF statement processed successfully', 200);
+  } catch (error) {
+    console.error('Error processing PDF statement:', error);
+    return sendError(res, error.message || 'Failed to process PDF statement', 'PDF_PROCESSING_ERROR', 500);
   }
 }; 

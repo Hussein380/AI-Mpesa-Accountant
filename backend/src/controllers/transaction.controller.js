@@ -9,66 +9,131 @@ console.log('Mongoose connection state:', mongoose.connection.readyState);
 
 const getTransactions = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user?._id;
+        if (!userId) {
+            return sendError(res, 'User not authenticated', 'AUTH_ERROR', 401);
+        }
+
         console.log('getTransactions: Processing request for user:', userId);
 
         // Build query
         const query = { user: userId };
+        
+        // Add source filter if provided
+        if (req.query.source) {
+            query.source = req.query.source;
+            console.log(`getTransactions: Filtering by source: ${req.query.source}`);
+        }
+        
+        // Add type filter if provided
+        if (req.query.type) {
+            query.type = req.query.type;
+        }
+        
+        // Add date range filter if provided
+        if (req.query.startDate || req.query.endDate) {
+            query.date = {};
+            if (req.query.startDate) {
+                query.date.$gte = new Date(req.query.startDate);
+            }
+            if (req.query.endDate) {
+                query.date.$lte = new Date(req.query.endDate);
+            }
+        }
+
         console.log('getTransactions: Query:', JSON.stringify(query));
+
+        // Get total count for pagination
+        const total = await Transaction.countDocuments(query);
+        console.log('getTransactions: Total count:', total);
 
         // Pagination
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        // Date filtering
-        if (req.query.startDate && req.query.endDate) {
-            query.date = {
-                $gte: new Date(req.query.startDate),
-                $lte: new Date(req.query.endDate)
-            };
-        }
-
-        // Get total count for pagination
-        let total = 0;
-        try {
-            total = await Transaction.countDocuments(query);
-            console.log('getTransactions: Total count:', total);
-        } catch (countError) {
-            console.error('getTransactions: Error counting documents:', countError);
-            // Continue with total = 0
-        }
-
-        // Fallback count if the first method fails
-        if (total === 0) {
-            try {
-                const allDocs = await Transaction.find(query).select('_id');
-                total = allDocs.length;
-                console.log('getTransactions: Fallback count:', total);
-            } catch (fallbackError) {
-                console.error('getTransactions: Fallback count error:', fallbackError);
-                // Continue with total = 0
-            }
-        }
-
-        // Execute query with pagination
+        // Get transactions
         const transactions = await Transaction.find(query)
             .sort({ date: -1 })
             .skip(skip)
             .limit(limit);
 
-        console.log('getTransactions: Found transactions:', transactions.length);
+        console.log(`getTransactions: Found ${transactions.length} transactions`);
+        
+        // Log transaction types for debugging
+        const types = [...new Set(transactions.map(t => t.type))];
+        console.log('getTransactions: Transaction types found:', types);
+        
+        // Count transactions by type
+        const typeCount = types.reduce((acc, type) => {
+            acc[type] = transactions.filter(t => t.type === type).length;
+            return acc;
+        }, {});
+        console.log('getTransactions: Transactions by type:', typeCount);
+        
+        // Count transactions by source
+        const sources = [...new Set(transactions.map(t => t.source))];
+        const sourceCount = sources.reduce((acc, source) => {
+            acc[source] = transactions.filter(t => t.source === source).length;
+            return acc;
+        }, {});
+        console.log('getTransactions: Transactions by source:', sourceCount);
+        
+        // Log PDF transactions specifically
+        const pdfTransactions = transactions.filter(t => t.source === 'PDF');
+        console.log(`getTransactions: PDF transactions count: ${pdfTransactions.length}`);
+        
+        if (pdfTransactions.length > 0) {
+            console.log('getTransactions: First PDF transaction example:', {
+                id: pdfTransactions[0]._id,
+                type: pdfTransactions[0].type,
+                amount: pdfTransactions[0].amount,
+                source: pdfTransactions[0].source,
+                description: pdfTransactions[0].description
+            });
+            
+            // Calculate PDF totals
+            const pdfIncome = pdfTransactions
+                .filter(t => t.type === 'RECEIVED')
+                .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+                
+            const pdfExpenses = pdfTransactions
+                .filter(t => ['SENT', 'PAYMENT', 'WITHDRAWAL'].includes(t.type))
+                .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+                
+            console.log(`getTransactions: PDF income total: ${pdfIncome}`);
+            console.log(`getTransactions: PDF expenses total: ${pdfExpenses}`);
+            console.log(`getTransactions: PDF net amount: ${pdfIncome - pdfExpenses}`);
+            
+            // Check for invalid transaction types
+            const invalidPdfTransactions = pdfTransactions.filter(t => 
+                !['RECEIVED', 'SENT', 'PAYMENT', 'WITHDRAWAL', 'DEPOSIT'].includes(t.type)
+            );
+            
+            if (invalidPdfTransactions.length > 0) {
+                console.log(`getTransactions: Found ${invalidPdfTransactions.length} PDF transactions with invalid types`);
+                console.log('getTransactions: Invalid PDF transaction types:', 
+                    [...new Set(invalidPdfTransactions.map(t => t.type))]
+                );
+                
+                // Log the first few invalid transactions
+                console.log('getTransactions: Invalid PDF transaction examples:', 
+                    invalidPdfTransactions.slice(0, 3).map(t => ({
+                        id: t._id,
+                        type: t.type,
+                        amount: t.amount,
+                        description: t.description
+                    }))
+                );
+            }
+        }
 
-        // Calculate pagination info
-        const totalPages = Math.ceil(total / limit);
-
-        // Return standardized success response
         return sendSuccess(res, {
             transactions,
             pagination: {
                 total,
                 page,
-                pages: totalPages
+                pages: Math.ceil(total / limit)
             }
         }, 'Transactions retrieved successfully');
     } catch (error) {

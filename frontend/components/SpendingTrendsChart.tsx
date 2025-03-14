@@ -16,6 +16,8 @@ interface SpendingTrendsChartProps {
         month: string;
         income: number;
         expenses: number;
+        pdfIncome?: number;
+        pdfExpenses?: number;
     }[];
 }
 
@@ -26,6 +28,32 @@ const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ data }) => {
                 <p className="text-gray-400">No data available for chart</p>
             </div>
         );
+    }
+
+    // Check if we have PDF data - more aggressive check
+    const hasPdfData = data.some(item => {
+        // Check if PDF income or expenses exist and are greater than 0
+        const hasPdfIncome = item.pdfIncome !== undefined && item.pdfIncome > 0;
+        const hasPdfExpenses = item.pdfExpenses !== undefined && item.pdfExpenses > 0;
+        return hasPdfIncome || hasPdfExpenses;
+    });
+
+    console.log('SpendingTrendsChart: Has PDF data:', hasPdfData);
+    if (hasPdfData) {
+        // Log all items with PDF data
+        const pdfItems = data.filter(item =>
+            (item.pdfIncome !== undefined && item.pdfIncome > 0) ||
+            (item.pdfExpenses !== undefined && item.pdfExpenses > 0)
+        );
+
+        console.log('SpendingTrendsChart: PDF data items:', pdfItems);
+
+        // Log total PDF income and expenses
+        const totalPdfIncome = data.reduce((sum, item) => sum + (item.pdfIncome || 0), 0);
+        const totalPdfExpenses = data.reduce((sum, item) => sum + (item.pdfExpenses || 0), 0);
+
+        console.log('SpendingTrendsChart: Total PDF income:', totalPdfIncome);
+        console.log('SpendingTrendsChart: Total PDF expenses:', totalPdfExpenses);
     }
 
     return (
@@ -65,7 +93,7 @@ const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ data }) => {
                             stroke="#34d399"
                             strokeWidth={2}
                             activeDot={{ r: 8 }}
-                            name="Income"
+                            name="Income (All)"
                         />
                         <Line
                             type="monotone"
@@ -73,11 +101,40 @@ const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ data }) => {
                             stroke="#f87171"
                             strokeWidth={2}
                             activeDot={{ r: 8 }}
-                            name="Expenses"
+                            name="Expenses (All)"
                         />
+                        {hasPdfData && (
+                            <>
+                                <Line
+                                    type="monotone"
+                                    dataKey="pdfIncome"
+                                    stroke="#10b981"
+                                    strokeWidth={2}
+                                    strokeDasharray="5 5"
+                                    activeDot={{ r: 6 }}
+                                    name="Income (PDF)"
+                                    dot={{ stroke: '#10b981', strokeWidth: 2, r: 4, fill: '#1f2937' }}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="pdfExpenses"
+                                    stroke="#ef4444"
+                                    strokeWidth={2}
+                                    strokeDasharray="5 5"
+                                    activeDot={{ r: 6 }}
+                                    name="Expenses (PDF)"
+                                    dot={{ stroke: '#ef4444', strokeWidth: 2, r: 4, fill: '#1f2937' }}
+                                />
+                            </>
+                        )}
                     </LineChart>
                 </ResponsiveContainer>
             </div>
+            {hasPdfData && (
+                <div className="mt-2 text-xs text-gray-400">
+                    <p>Dashed lines represent data from PDF statements</p>
+                </div>
+            )}
         </div>
     );
 };

@@ -214,7 +214,7 @@ class ContextEnrichmentService {
       const amountThresholds = this.extractAmountThresholds(query);
       
       // Build MongoDB query
-      const dbQuery = this.buildTransactionQuery(userId, timeframe, categories, amountThresholds);
+      const dbQuery = this.buildTransactionQuery(userId, { timeframe, categories, amountThresholds });
       
       // Get transactions
       const transactions = await Transaction.find(dbQuery)
@@ -566,37 +566,38 @@ class ContextEnrichmentService {
   /**
    * Build transaction query
    * @param {string} userId - User ID
-   * @param {Object} timeframe - Date range
-   * @param {Array} categories - Categories
-   * @param {Object} amountThresholds - Amount thresholds
+   * @param {Object} filters - Query filters
    * @returns {Object} MongoDB query
    */
-  buildTransactionQuery(userId, timeframe, categories, amountThresholds) {
+  buildTransactionQuery(userId, filters = {}) {
     const query = { user: new mongoose.Types.ObjectId(userId) };
     
     // Add date range
-    if (timeframe && timeframe.startDate && timeframe.endDate) {
+    if (filters.timeframe && filters.timeframe.startDate && filters.timeframe.endDate) {
       query.date = {
-        $gte: timeframe.startDate,
-        $lte: timeframe.endDate
+        $gte: filters.timeframe.startDate,
+        $lte: filters.timeframe.endDate
       };
     }
     
     // Add categories
-    if (categories && categories.length > 0) {
-      query.category = { $in: categories };
+    if (filters.categories && filters.categories.length > 0) {
+      query.category = { $in: filters.categories };
     }
     
     // Add amount thresholds
-    if (amountThresholds) {
-      query.amount = {};
-      
-      if (amountThresholds.min !== undefined) {
-        query.amount.$gte = amountThresholds.min;
-      }
-      
-      if (amountThresholds.max !== undefined) {
-        query.amount.$lte = amountThresholds.max;
+    if (filters.amountThresholds) {
+      // Only create the amount object if we have min or max values
+      if (filters.amountThresholds.min !== undefined || filters.amountThresholds.max !== undefined) {
+        query.amount = {};
+        
+        if (filters.amountThresholds.min !== undefined) {
+          query.amount.$gte = filters.amountThresholds.min;
+        }
+        
+        if (filters.amountThresholds.max !== undefined) {
+          query.amount.$lte = filters.amountThresholds.max;
+        }
       }
     }
     

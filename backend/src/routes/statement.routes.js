@@ -5,12 +5,16 @@ const {
   getStatements, 
   getStatementById, 
   deleteStatement,
-  getStatementStatistics
+  getStatementStatistics,
+  processPdf
 } = require('../controllers/statement.controller');
 const { auth } = require('../middleware/auth');
 
 // Process M-Pesa SMS
 router.post('/process-sms', auth, processSms);
+
+// Process M-Pesa PDF statement
+router.post('/process-pdf', auth, processPdf);
 
 // Get all statements for a user
 router.get('/', auth, getStatements);
