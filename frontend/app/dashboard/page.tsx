@@ -12,6 +12,39 @@ import { getEndpoint, createAuthenticatedRequest, processApiResponse } from '../
 import { Transaction, TransactionResponse } from '@/src/types/models'
 import SpendingTrendsChart from '@/components/SpendingTrendsChart'
 
+// Function to convert Transaction to MpesaTransaction
+const convertTransactionToMpesaTransaction = (transaction: Transaction): MpesaTransaction => {
+    // Map the type from Transaction to MpesaTransaction
+    let mpesaType: 'SENT' | 'RECEIVED' | 'UNKNOWN' = 'UNKNOWN';
+
+    if (transaction.type === 'SENT') {
+        mpesaType = 'SENT';
+    } else if (transaction.type === 'RECEIVED') {
+        mpesaType = 'RECEIVED';
+    } else if (['PAYMENT', 'WITHDRAWAL'].includes(transaction.type)) {
+        // Treat PAYMENT and WITHDRAWAL like SENT (outgoing money)
+        mpesaType = 'SENT';
+    } else if (transaction.type === 'DEPOSIT') {
+        // Treat DEPOSIT like RECEIVED (incoming money)
+        mpesaType = 'RECEIVED';
+    }
+
+    return {
+        id: transaction._id,
+        transactionId: transaction.transactionId,
+        type: mpesaType,
+        amount: transaction.amount,
+        recipient: transaction.recipient,
+        sender: transaction.sender,
+        date: transaction.date,
+        balance: transaction.balance,
+        description: transaction.description,
+        mpesaReference: transaction.mpesaReference,
+        // Add any additional fields from Transaction that MpesaTransaction might need
+        source: transaction.source
+    };
+};
+
 export default function Dashboard() {
     const [transactions, setTransactions] = useState<MpesaTransaction[]>([])
     const [stats, setStats] = useState({
@@ -67,8 +100,11 @@ export default function Dashboard() {
                     console.log('Dashboard: First transaction balance type:', typeof data.transactions[0].balance);
                 }
 
-                // Update state with the fetched data
-                setTransactions(data.transactions)
+                // Convert Transaction[] to MpesaTransaction[] before updating state
+                const mpesaTransactions = data.transactions.map(convertTransactionToMpesaTransaction);
+
+                // Update state with the converted data
+                setTransactions(mpesaTransactions)
                 setPagination(data.pagination)
 
                 // Calculate income with detailed logging

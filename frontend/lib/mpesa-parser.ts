@@ -2,6 +2,7 @@
 // This utility parses M-Pesa SMS messages and extracts transaction details
 
 export interface MpesaTransaction {
+    id?: string; // Added for compatibility with the dashboard
     transactionId: string;
     type: 'SENT' | 'RECEIVED' | 'UNKNOWN';
     amount: number;
@@ -12,6 +13,10 @@ export interface MpesaTransaction {
     balance?: number;
     description?: string;
     mpesaReference?: string;
+    source?: 'PDF' | 'SMS' | 'MANUAL' | 'TEST'; // Added for compatibility
+    // Added because the original Transaction has these
+    category?: string;
+    _id?: string;
 }
 
 /**
@@ -103,7 +108,10 @@ export function parseMpesaSms(smsText: string): MpesaTransaction[] {
                 date,
                 balance,
                 description: message.substring(0, 100), // Store part of the original message as description
-                mpesaReference: undefined // Assuming mpesaReference is not available in the message
+                mpesaReference: undefined, // Assuming mpesaReference is not available in the message
+                source: 'SMS', // Assuming source is SMS
+                category: undefined, // Assuming category is not available in the message
+                _id: undefined // Assuming _id is not available in the message
             });
         } catch (error) {
             console.error('Error parsing M-Pesa message:', message, error);
