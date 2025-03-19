@@ -10,40 +10,8 @@ import { useSearchParams } from "next/navigation"
 import { getToken } from '../../utils/auth'
 import { getEndpoint, createAuthenticatedRequest, processApiResponse } from '../../utils/api'
 import { Transaction, TransactionResponse } from '@/src/types/models'
+import { convertToMpesaTransactions } from '@/src/types/transaction-mapper'
 import SpendingTrendsChart from '@/components/SpendingTrendsChart'
-
-// Function to convert Transaction to MpesaTransaction
-const convertTransactionToMpesaTransaction = (transaction: Transaction): MpesaTransaction => {
-    // Map the type from Transaction to MpesaTransaction
-    let mpesaType: 'SENT' | 'RECEIVED' | 'UNKNOWN' = 'UNKNOWN';
-
-    if (transaction.type === 'SENT') {
-        mpesaType = 'SENT';
-    } else if (transaction.type === 'RECEIVED') {
-        mpesaType = 'RECEIVED';
-    } else if (['PAYMENT', 'WITHDRAWAL'].includes(transaction.type)) {
-        // Treat PAYMENT and WITHDRAWAL like SENT (outgoing money)
-        mpesaType = 'SENT';
-    } else if (transaction.type === 'DEPOSIT') {
-        // Treat DEPOSIT like RECEIVED (incoming money)
-        mpesaType = 'RECEIVED';
-    }
-
-    return {
-        id: transaction._id,
-        transactionId: transaction.transactionId,
-        type: mpesaType,
-        amount: transaction.amount,
-        recipient: transaction.recipient,
-        sender: transaction.sender,
-        date: transaction.date,
-        balance: transaction.balance,
-        description: transaction.description,
-        mpesaReference: transaction.mpesaReference,
-        // Add any additional fields from Transaction that MpesaTransaction might need
-        source: transaction.source
-    };
-};
 
 export default function Dashboard() {
     const [transactions, setTransactions] = useState<MpesaTransaction[]>([])
@@ -100,15 +68,15 @@ export default function Dashboard() {
                     console.log('Dashboard: First transaction balance type:', typeof data.transactions[0].balance);
                 }
 
-                // Convert Transaction[] to MpesaTransaction[] before updating state
-                const mpesaTransactions = data.transactions.map(convertTransactionToMpesaTransaction);
+                // Convert Transaction[] to MpesaTransaction[] using the mapper
+                const mpesaTransactions = convertToMpesaTransactions(data.transactions);
 
                 // Update state with the converted data
                 setTransactions(mpesaTransactions)
                 setPagination(data.pagination)
 
                 // Calculate income with detailed logging
-                const income = data.transactions.reduce((sum, t) => {
+                const income = mpesaTransactions.reduce((sum, t) => {
                     if (t.type === 'RECEIVED') {
                         // Ensure amount is a number
                         const amount = parseFloat(t.amount || 0);
@@ -120,7 +88,7 @@ export default function Dashboard() {
                 console.log('Dashboard: Total income calculated:', income);
 
                 // Calculate expenses with detailed logging
-                const expenses = data.transactions.reduce((sum, t) => {
+                const expenses = mpesaTransactions.reduce((sum, t) => {
                     if (['SENT', 'PAYMENT', 'WITHDRAWAL'].includes(t.type)) {
                         // Ensure amount is a number
                         const amount = parseFloat(t.amount || 0);
@@ -140,30 +108,30 @@ export default function Dashboard() {
                     income,
                     expenses,
                     balance,
-                    count: data.transactions.length
+                    count: mpesaTransactions.length
                 }
 
                 console.log('Dashboard: Stats calculated:', completeStats);
                 setStats(completeStats)
 
                 // Generate spending trends data
-                generateSpendingTrends(data.transactions);
+                generateSpendingTrends(mpesaTransactions);
 
                 // Update lastUpdated timestamp
                 setLastUpdated(new Date());
 
-                // Add debug call here
-                debugPdfTransactions(data.transactions);
+                // Add debug call here - use converted transactions
+                debugPdfTransactions(mpesaTransactions);
 
                 // Calculate income and expenses with detailed logging
                 console.log('Dashboard: Starting financial calculations...');
 
                 // Log transaction types for debugging
-                const transactionTypes = [...new Set(data.transactions.map(t => t.type))];
+                const transactionTypes = [...new Set(mpesaTransactions.map(t => t.type))];
                 console.log('Dashboard: Transaction types found:', transactionTypes);
 
                 // Count transactions by source
-                const sourceCount = data.transactions.reduce((acc, t) => {
+                const sourceCount = mpesaTransactions.reduce((acc, t) => {
                     acc[t.source] = (acc[t.source] || 0) + 1;
                     return acc;
                 }, {});
@@ -171,18 +139,18 @@ export default function Dashboard() {
 
                 // Enhanced PDF transaction detection - try multiple approaches
                 // 1. First try direct source field
-                let pdfTransactions = data.transactions.filter(t => t.source === 'PDF');
+                let pdfTransactions = mpesaTransactions.filter(t => t.source === 'PDF');
 
                 // 2. If that doesn't work, try looking for PDF in the description
                 if (pdfTransactions.length === 0) {
-                    pdfTransactions = data.transactions.filter(t =>
+                    pdfTransactions = mpesaTransactions.filter(t =>
                         t.description && t.description.toUpperCase().includes('PDF')
                     );
                 }
 
                 // 3. If still no luck, check for PDF in the transaction ID
                 if (pdfTransactions.length === 0) {
-                    pdfTransactions = data.transactions.filter(t =>
+                    pdfTransactions = mpesaTransactions.filter(t =>
                         t.transactionId && t.transactionId.toUpperCase().includes('PDF')
                     );
                 }
@@ -367,7 +335,7 @@ export default function Dashboard() {
     };
 
     // Update the debugPdfTransactions function
-    const debugPdfTransactions = (transactions) => {
+    const debugPdfTransactions = (transactions: MpesaTransaction[]) => {
         console.log('DEBUG PDF: Starting detailed PDF transaction debugging');
 
         // 1. Check for transactions with source === 'PDF'
